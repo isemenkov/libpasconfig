@@ -513,10 +513,211 @@ function config_setting_lookup_float (const setting : pconfig_setting_t; const
 function config_setting_lookup_bool (const setting : pconfig_setting_t; const
   name : PChar; value : PInteger) : Integer; cdecl; external libConfig;
 function config_setting_lookup_string (const setting : pconfig_setting_t; const
-  name : PChar; value : PPChar); cdecl; external libConfig;
+  name : PChar; value : PPChar) : Integr; cdecl; external libConfig;
 
+{ These functions get and set the external format for the setting setting.
 
+  The format must be one of the constants CONFIG_FORMAT_DEFAULT or
+  CONFIG_FORMAT_HEX. All settings support the CONFIG_FORMAT_DEFAULT format.
+  The CONFIG_FORMAT_HEX format specifies hexadecimal formatting for integer
+  values, and hence only applies to settings of type CONFIG_TYPE_INT and
+  CONFIG_TYPE_INT64. If format is invalid for the given setting, it is ignored.
 
+  If a non-default format has not been set for the setting,
+  config_setting_get_format() returns the default format for the configuration,
+  as set by config_set_default_format().
+
+  config_setting_set_format() returns CONFIG_TRUE on success and CONFIG_FALSE on
+  failure. }
+function config_setting_get_format (const setting : pconfig_setting_t) : Word;
+  cdecl; external libConfig;
+function config_setting_set_format (setting : pconfig_setting_t; format : Word)
+  : Integer; cdecl; external libConfig;
+
+{ This function fetches the child setting named name from the group setting. It
+  returns the requested setting on success, or NULL if the setting was not found
+  or if setting is not a group. }
+function config_setting_get_member (const setting : pconfig_setting_t; const
+  name : PChar) : pconfig_setting_t; cdecl; external libConfig;
+
+{ This function fetches the element at the given index index in the setting
+  setting, which must be an array, list, or group. It returns the requested
+  setting on success, or NULL if index is out of range or if setting is not an
+  array, list, or group. }
+function config_setting_get_elem (const setting : pconfig_setting_t; idx :
+  Cardinal) : pconfig_setting_t; cdecl; external libConfig;
+
+{ These functions return the value at the specified index index in the setting
+  setting. If the setting is not an array or list, or if the type of the element
+  does not match the type requested, or if index is out of range, they return 0
+  or NULL. Storage for the string returned by config_setting_get_string_elem()
+  is managed by the library and released automatically when the setting is
+  destroyed or when its value is changed; the string must not be freed by the
+  caller. }
+function config_setting_get_int_elem (const setting : pconfig_setting_t; idx :
+  Integer) : Integer; cdecl; external libConfig;
+function config_setting_get_int64_elem (const setting : pconfig_setting_t; idx :
+  Integer) : Int64; cdecl; external libConfig;
+function config_setting_get_float_elem (const setting : pconfig_setting_t; idx :
+  Integer) : Double; cdecl; external libConfig;
+function config_setting_get_bool_elem (const setting : pconfig_setting_t; idx :
+  Integer) : Integer; cdecl; external libConfig;
+function config_setting_get_string_elem (const setting : pconfig_setting_t;
+  idx : Integer) : PChar; cdecl; external libConfig;
+
+{ These functions set the value at the specified index index in the setting
+  setting to value. If index is negative, a new element is added to the end of
+  the array or list. On success, these functions return a pointer to the setting
+  representing the element. If the setting is not an array or list, or if the
+  setting is an array and the type of the array does not match the type of the
+  value, or if index is out of range, they return NULL.
+  config_setting_set_string_elem() makes a copy of the passed string value, so
+  it may be subsequently freed or modified by the caller without affecting the
+  value of the setting. }
+function config_setting_set_int_elem (setting : pconfig_setting_t; idx :
+  Integer; value : Integer) : pconfig_setting_t; cdecl; external libConfig;
+function config_setting_set_int64_elem (setting : pconfig_setting_t; idx :
+  Integer; value : Int64) : pconfig_setting_t; cdecl; external libConfig;
+function config_setting_set_float_elem (setting : pconfig_setting_t; idx :
+  Integer; value : Double) : pconfig_setting_t; cdecl; external libConfig;
+function config_setting_set_bool_elem (setting : pconfig_setting_t; idx :
+  Integer; value : Integer) : pconfig_setting_t; cdecl; external libConfig;
+function config_setting_set_string_elem (setting : pconfig_setting_t; idx :
+  Integer; const value : PChar) : pconfig_setting_t; cdecl; external libConfig;
+
+{ This function adds a new child setting or element to the setting parent, which
+  must be a group, array, or list. If parent is an array or list, the name
+  parameter is ignored and may be NULL.
+
+  The function returns the new setting on success, or NULL if parent is not a
+  group, array, or list; or if there is already a child setting of parent named
+  name; or if type is invalid. If type is a scalar type, the new setting will
+  have a default value of 0, 0.0, false, or NULL, as appropriate. }
+function config_setting_add (parent : pconfig_setting_t; const name : PChar;
+  elem_type : Integer) : pconfig_setting_t; cdecl; external libConfig;
+
+{ This function removes and destroys the setting named name from the parent
+  setting parent, which must be a group. Any child settings of the setting are
+  recursively destroyed as well.
+
+  The name parameter can also specify a setting path relative to the provided
+  parent. (In that case, the setting will be looked up and removed.)
+
+  The function returns CONFIG_TRUE on success. If parent is not a group, or if
+  it has no setting with the given name, it returns CONFIG_FALSE. }
+function config_setting_remove (parent : pconfig_setting_t; const name : PChar)
+  : Integer; cdecl; external libConfig;
+
+{ This function removes the child setting at the given index index from the
+  setting parent, which must be a group, list, or array. Any child settings of
+  the removed setting are recursively destroyed as well.
+
+  The function returns CONFIG_TRUE on success. If parent is not a group, list,
+  or array, or if index is out of range, it returns CONFIG_FALSE. }
+function config_setting_remove_elem (parent : pconfig_setting_t; idx : Cardinal)
+  : Integer; cdecl; external libConfig;
+
+{ This function, which is implemented as a macro, returns the root setting for
+  the configuration config. The root setting is a group. }
+function config_root_setting (const config : pconfig_t) :
+  pconfig_setting_t; inline;
+
+{ This function returns the name of the given setting, or NULL if the setting
+  has no name. Storage for the returned string is managed by the library and
+  released automatically when the setting is destroyed; the string must not be
+  freed by the caller. }
+function config_setting_name (const setting : pconfig_setting_t) : PChar;
+  inline;
+
+{ This function returns the parent setting of the given setting, or NULL if
+  setting is the root setting. }
+function config_setting_parent (const setting : pconfig_setting_t) :
+  pconfig_setting_t; inline;
+
+{ This function returns CONFIG_TRUE if the given setting is the root setting,
+  and CONFIG_FALSE otherwise. }
+function config_setting_is_root (const setting : pconfig_setting_t) : Integer;
+  inline;
+
+{ This function returns the index of the given setting within its parent
+  setting. If setting is the root setting, this function returns -1. }
+function config_setting_index (const setting : pconfig_setting_t) : Integer;
+  cdecl; external libConfig;
+
+{ This function returns the number of settings in a group, or the number of
+  elements in a list or array. For other types of settings, it returns 0. }
+function config_setting_length (const setting : pconfig_setting_t) : Integer;
+  cdecl; external libConfig;
+
+{ This function returns the type of the given setting. The return value is one
+  of the constants CONFIG_TYPE_INT, CONFIG_TYPE_INT64, CONFIG_TYPE_FLOAT,
+  CONFIG_TYPE_STRING, CONFIG_TYPE_BOOL, CONFIG_TYPE_ARRAY, CONFIG_TYPE_LIST, or
+  CONFIG_TYPE_GROUP. }
+function config_setting_type (const setting : pconfig_setting_t) : Integer;
+  inline;
+
+{ These convenience functions, which are implemented as macros, test if the
+  setting setting is of a given type. They return CONFIG_TRUE or CONFIG_FALSE. }
+function config_setting_is_group (const setting : pconfig_setting_t) : Integer;
+  inline;
+function config_setting_is_array (const setting : pconfig_setting_t) : Integer;
+  inline;
+function config_setting_is_list (const setting : pconfig_setting_t) : Integer;
+  inline;
+
+{ These convenience functions, some of which are implemented as macros, test if
+  the setting setting is of an aggregate type (a group, array, or list), of a
+  scalar type (integer, 64-bit integer, floating point, boolean, or string),
+  and of a number (integer, 64-bit integer, or floating point), respectively.
+  They return CONFIG_TRUE or CONFIG_FALSE. }
+function config_setting_is_aggregate (const setting : pconfig_setting_t) :
+  Integer; inline;
+function config_setting_is_number (const setting : pconfig_setting_t) : Integer;
+  inline;
+function config_setting_is_scalar (const setting : pconfig_setting_t) : Integer;
+  inline;
+
+{ This function returns the name of the file from which the setting setting was
+  read, or NULL if the setting was not read from a file. This information is
+  useful for reporting application-level errors. Storage for the returned string
+  is managed by the library and released automatically when the configuration is
+  destroyed; the string must not be freed by the caller. }
+function config_setting_source_file (const setting : pconfig_setting_t) : PChar;
+  inline;
+
+{ This function returns the line number of the configuration file or stream at
+  which the setting setting was read, or 0 if no line number is available. This
+  information is useful for reporting application-level errors. }
+function config_setting_source_line (const setting : pconfig_setting_t) :
+    Cardinal; inline;
+
+{$IFDEF LIBCONFIG_VER_MAJOR    >= 1 AND
+        LIBCONFIG_VER_MINOR    >= 7 AND
+        LIBCONFIG_VER_REVISION >= 0}
+{ These functions make it possible to attach arbitrary data to a configuration
+  structure, for instance a “wrapper” or “peer” object written in another
+  programming language. }
+procedure config_set_hook (config : pconfig_t; hook : Pointer); cdecl;
+  external libConfig;
+function config_get_hook (const config : pconfig_t) : Pointer; inline;
+{$ENDIF}
+
+{ These functions make it possible to attach arbitrary data to each setting
+  structure, for instance a “wrapper” or “peer” object written in another
+  programming language. The destructor function, if one has been supplied via a
+  call to config_set_destructor(), will be called by the library to dispose of
+  this data when the setting itself is destroyed. There is no default
+  destructor. }
+procedure config_setting_set_hook (setting : pconfig_setting_t; hook : Pointer);
+  cdecl; external libConfig;
+function config_setting_get_hook (const setting : pconfig_setting_t) : Pointer;
+  inline;
+
+{ This function assigns the destructor function destructor for the configuration
+  config. This function accepts a single void * argument and has no return
+  value. See config_setting_set_hook() above for more information. }
+procedure config_set_destructor (config : pconfig_t; destructor_fn :
+  destructor_fn_t); cdecl; external libConfig;
 
 implementation
 
@@ -579,7 +780,95 @@ begin
   config^.tab_width := width;
 end;
 
+function config_root_setting(const config: pconfig_t
+  ): pconfig_setting_t;
+begin
+  Result := config^.root;
+end;
 
+function config_setting_name(const setting: pconfig_setting_t): PChar;
+begin
+  Result := setting^.name;
+end;
+
+function config_setting_parent(const setting: pconfig_setting_t
+  ): pconfig_setting_t;
+begin
+  Result := setting^.parent;
+end;
+
+function config_setting_is_root(const setting: pconfig_setting_t): Integer;
+begin
+  if setting^.parent then
+    Result := CONFIG_FALSE
+  else
+    Result := CONFIG_TRUE;
+end;
+
+function config_setting_type(const setting: pconfig_setting_t): Integer;
+begin
+  Result := setting^.settings_type;
+end;
+
+function config_setting_is_group(const setting: pconfig_setting_t): Integer;
+begin
+  Result := setting^.settings_type = CONFIG_TYPE_GROUP;
+end;
+
+function config_setting_is_array(const setting: pconfig_setting_t): Integer;
+begin
+  Result := setting^.settings_type = CONFIG_TYPE_ARRAY;
+end;
+
+function config_setting_is_list(const setting: pconfig_setting_t): Integer;
+begin
+  Result := setting^.settings_type = CONFIG_TYPE_LIST;
+end;
+
+function config_setting_is_aggregate(const setting: pconfig_setting_t): Integer;
+begin
+  Result := (setting^.settings_type = CONFIG_TYPE_GROUP) or
+    (setting^.settings_type = CONFIG_TYPE_LIST) or (setting^.settings_type =
+    CONFIG_TYPE_ARRAY);
+end;
+
+function config_setting_is_number(const setting: pconfig_setting_t): Integer;
+begin
+  Result := (setting^.settings_type = CONFIG_TYPE_INT) or
+    (setting^.settings_type = CONFIG_TYPE_INT64) or
+    (setting^.settings_type = CONFIG_TYPE_FLOAT);
+end;
+
+function config_setting_is_scalar(const setting: pconfig_setting_t): Integer;
+begin
+  Result := (setting^.settings_type = CONFIG_TYPE_BOOL) or
+    (setting^.settings_type = CONFIG_TYPE_STRING) or
+    config_setting_is_number(setting);
+end;
+
+function config_setting_source_file(const setting: pconfig_setting_t): PChar;
+begin
+  Result := setting^.file_name;
+end;
+
+function config_setting_source_line(const setting: pconfig_setting_t): Cardinal;
+begin
+  Result := setting^.line;
+end;
+
+{$IFDEF LIBCONFIG_VER_MAJOR    >= 1 AND
+        LIBCONFIG_VER_MINOR    >= 7 AND
+        LIBCONFIG_VER_REVISION >= 0}
+function config_get_hook(const config: pconfig_t): Pointer;
+begin
+  Result := config^.hook;
+end;
+{$ENDIF}
+
+function config_setting_get_hook(const setting: pconfig_setting_t): Pointer;
+begin
+  Result := setting^.hook;
+end;
 
 end.
 
