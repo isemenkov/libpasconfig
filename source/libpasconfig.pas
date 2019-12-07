@@ -80,6 +80,9 @@ const
   CONFIG_OPTION_FSYNC                                                   = $0040;
   {$ENDIF}
 
+  CONFIG_TRUE                                                           = 1;
+  CONFIG_FALSE                                                          = 0;
+
 type
   pconfig_error_t = ^config_error_t;
   config_error_t = (
@@ -155,7 +158,7 @@ type
     {$ENDIF}
     error_text : PChar;
     error_file : PChar;
-    eror_line : Integer;
+    error_line : Integer;
     error_type : config_error_t;
     filenames : PPChar;
     num_filenames : Cardinal;
@@ -184,9 +187,155 @@ procedure config_destroy (config : pconfig_t); cdecl; external libConfig;
 procedure config_clear (config : pconfig_t); cdecl; external libConfig;
 {$ENDIF}
 
-//function config_read (config : pconfig_t;
+{ This function reads and parses a configuration from the given stream into the
+  configuration object config. It returns CONFIG_TRUE on success, or
+  CONFIG_FALSE on failure; the config_error_text(), config_error_file(),
+  config_error_line(), and config_error_type() functions, described below, can
+  be used to obtain information about the error. }
+function config_read (config : pconfig_t; stream : Pointer) : Integer; cdecl;
+  external libConfig;
+
+{ This function reads and parses a configuration from the file named filename
+  into the configuration object config. It returns CONFIG_TRUE on success, or
+  CONFIG_FALSE on failure; the config_error_text() and config_error_line()
+  functions, described below, can be used to obtain information about the
+  error. }
+function config_read_file (config : pconfig_t; const filename : PChar) :
+  Integer; cdecl; external libConfig;
+
+{ This function reads and parses a configuration from the string str into the
+  configuration object config. It returns CONFIG_TRUE on success, or
+  CONFIG_FALSE on failure; the config_error_text() and config_error_line()
+  functions, described below, can be used to obtain information about the
+  error. }
+function config_read_string (config : pconfig_t; const str : PChar) : Integer;
+  cdecl; external libConfig;
+
+{ This function writes the configuration config to the given stream. }
+procedure config_write (const config : pconfig_t; stream : Pointer); cdecl;
+  external libConfig;
+
+{ This function writes the configuration config to the file named filename. It
+  returns CONFIG_TRUE on success, or CONFIG_FALSE on failure. }
+function config_write_file (config : pconfig_t; const filename : PChar) :
+  Integer; cdecl; external libConfig;
+
+{ These functions, which are implemented as macros, return the text, filename,
+  and line number of the parse error, if one occurred during a call to
+  config_read(), config_read_string(), or config_read_file(). Storage for the
+  strings returned by config_error_text() and config_error_file() are managed by
+  the library and released automatically when the configuration is destroyed;
+  these strings must not be freed by the caller. If the error occurred in text
+  that was read from a string or stream, config_error_file() will return NULL. }
+function config_error_text (const config : pconfig_t) : PChar; inline;
+function config_error_file (const config : pconfig_t) : PChar; inline;
+function config_error_line (const config : pconfig_t) : Integer; inline;
+
+{ This function, which is implemented as a macro, returns the type of error that
+  occurred during the last call to one of the read or write functions. The
+  config_error_t type is an enumeration with the following values:
+  CONFIG_ERR_NONE, CONFIG_ERR_FILE_IO, CONFIG_ERR_PARSE. These represent
+  success, a file I/O error, and a parsing error, respectively. }
+function config_error_type (const config : pconfig_t) : config_error_t; inline;
+
+{ config_set_include_dir() specifies the include directory, include_dir,
+  relative to which the files specified in ‘@include’ directives will be located
+  for the configuration config. By default, there is no include directory, and
+  all include files are expected to be relative to the current working
+  directory. If include_dir is NULL, the default behavior is reinstated.
+
+  For example, if the include directory is set to /usr/local/etc, the include
+  directive ‘@include "configs/extra.cfg"’ would include the file
+  /usr/local/etc/configs/extra.cfg.
+
+  config_get_include_dir() returns the current include directory for the
+  configuration config, or NULL if none is set. }
+procedure config_set_include_dir (config : pconfig_t; const include_dir :
+  PChar); cdecl; external libConfig;
+function config_get_include_dir (const config : pconfig_t) : PChar; inline;
+
+{$IFDEF LIBCONFIG_VER_MAJOR    >= 1 AND
+        LIBCONFIG_VER_MINOR    >= 7 AND
+        LIBCONFIG_VER_REVISION >= 0}
+{ Specifies the include function func to use when processing include directives.
+  If func is NULL, the default include function, config_default_include_func(),
+  will be reinstated.
+
+  The type config_include_fn_t is a type alias for a function whose signature
+  is:
+
+  Function: const char ** func (config_t *config, const char *include_dir,
+  const char *path, const char **error)
+
+        The function receives the configuration config, the configuration’s
+        current include directory include_dir, the argument to the include
+        directive path; and a pointer at which to return an error message error.
+
+        On success, the function should return a NULL-terminated array of paths.
+        Any relative paths must be relative to the program’s current working
+        directory. The contents of these files will be inlined at the point of
+        inclusion, in the order that the paths appear in the array. Both the
+        array and its elements should be heap allocated; the library will take
+        ownership of and eventually free the strings in the array and the array
+        itself.
+
+        On failure, the function should return NULL and set *error to a static
+        error string which should be used as the parse error for the
+        configuration; the library does not take ownership of or free this
+        string.
+
+        The default include function, config_default_include_func(), simply
+        returns a NULL-terminated array containing either a copy of path if it’s
+        an absolute path, or a concatenation of include_dir and path if it’s a
+        relative path.
+
+  Application-supplied include functions can perform custom tasks like wildcard
+  expansion or variable substitution. For example, consider the include
+  directive:
+
+  @include "configs/*.cfg"
+
+  The include function would be invoked with the path ‘configs/*.cfg’ and could
+  do wildcard expansion on that path, returning a list of paths to files with
+  the file extension ‘.cfg’ in the subdirectory ‘configs’. Each of these files
+  would then be inlined at the location of the include directive.
+
+  Tasks like wildcard expansion and variable substitution are non-trivial to
+  implement and typically require platform-specific code. In the interests of
+  keeping the library as compact and platform-independent as possible,
+  implementations of such include functions are not included. }
+procedure config_set_include_func (config : pconfig_t; func :
+  config_include_fn_t); cdecl; external libConfig;
+{$ENDIF}
+
+
 
 implementation
+
+function config_error_text(const config: pconfig_t): PChar;
+begin
+  Result := config^.error_text;
+end;
+
+function config_error_file(const config: pconfig_t): PChar;
+begin
+  Result := config^.error_file;
+end;
+
+function config_error_line(const config: pconfig_t): Integer;
+begin
+  Result := config^.error_line;
+end;
+
+function config_error_type(const config: pconfig_t): config_error_t;
+begin
+  Result := config^.error_type;
+end;
+
+function config_get_include_dir(const config: pconfig_t): PChar;
+begin
+  Result := config^.include_dir;
+end;
 
 end.
 
