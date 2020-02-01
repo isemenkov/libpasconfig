@@ -9,7 +9,7 @@ uses
 
 type
 
-  TTestCase= class(TTestCase)
+  TTestCase = class(TTestCase)
   protected
     procedure SetUp; override;
     procedure TearDown; override;
