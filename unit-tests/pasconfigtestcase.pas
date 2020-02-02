@@ -5,37 +5,44 @@ unit pasconfigtestcase;
 interface
 
 uses
-  Classes, SysUtils, fpcunit, testutils, testregistry;
+  Classes, SysUtils, fpcunit, testutils, testregistry, libpasconfig;
 
 type
 
-  TTestCase = class(TTestCase)
-  protected
-    procedure SetUp; override;
-    procedure TearDown; override;
+  { TLibConfigTest }
+
+  TLibConfigTest = class(TTestCase)
+  private
+    FConfig : pconfig_t;
+    FSettings : pconfig_setting_t;
   published
-    procedure TestHookUp;
+    procedure TestCreateConfig;
   end;
 
 implementation
 
-procedure TTestCase.TestHookUp;
-begin
-  Fail('Напишите ваш тест');
-end;
+{ TLibConfigTest }
 
-procedure TTestCase.SetUp;
-begin
 
-end;
-
-procedure TTestCase.TearDown;
+procedure TLibConfigTest.TestCreateConfig;
+var
+  root, setting, group : pconfig_setting_t;
 begin
+  config_init(FConfig);
+  root := config_root_setting(FConfig);
+  group := config_setting_add(group, 'test', CONFIG_TYPE_GROUP);
+
+  setting := config_setting_add(group, 'option 1', CONFIG_TYPE_STRING);
+  config_setting_set_string(setting, 'option test value');
+
+  setting := config_setting_add(group, 'option 2', CONFIG_TYPE_INT);
+  config_setting_set_int(setting, 123);
+
 
 end;
 
 initialization
 
-  RegisterTest(TTestCase);
+  RegisterTest(TLibConfigTest);
 end.
 

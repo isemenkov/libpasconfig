@@ -3,7 +3,7 @@
 (*              object pascal wrapper around libconfig library                *)
 (*                  https://github.com/hyperrealm/libconfig                   *)
 (*                                                                            *)
-(* Copyright (c) 2019                                       Ivan Semenkov     *)
+(* Copyright (c) 2019 - 2020                                Ivan Semenkov     *)
 (* https://github.com/isemenkov/libpasconfig                ivan@semenkov.pro *)
 (*                                                          Ukraine           *)
 (******************************************************************************)
@@ -37,21 +37,20 @@ uses
   {$PACKRECORDS C}
 {$ENDIF}
 
-{$IFDEF WINDOWS}
-  const libConfig = 'libconfig.dll';
-{$ENDIF}
-{$IFDEF LINUX}
-  const libConfig = 'libconfig.so';
+{$IFNDEF libConfig}
+  {$IFDEF WIN32}
+    const libConfig = 'libconfig.dll';
+  {$ENDIF}
+  {$IFDEF WIN64}
+    const libConfig = 'libconfig-x64.dll';
+  {$ENDIF}
+  {$IFDEF LINUX}
+    const libConfig = 'libconfig.so';
+  {$ENDIF}
 {$ENDIF}
 
-{$IFNDEF LIBCONFIG_VER_MAJOR}
-  {$DEFINE LIBCONFIG_VER_MAJOR 1}
-{$ENDIF}
-{$IFNDEF LIBCONFIG_VER_MINOR}
-  {$DEFINE LIBCONFIG_VER_MINOR 5}
-{$ENDIF}
-{$IFNDEF LIBCONFIG_VER_REVISION}
-  {$DEFINE LIBCONFIG_VER_REVISION 0}
+{$IFNDEF LIBCONFIG_VER_1_5_0 AND LIBCONFIG_VER_1_7_0}
+  {$DEFINE LIBCONFIG_VER_1_7_0}
 {$ENDIF}
 
 const
@@ -73,9 +72,7 @@ const
   CONFIG_OPTION_COLON_ASSIGNMENT_FOR_GROUPS                             = $0004;
   CONFIG_OPTION_COLON_ASSIGNMENT_FOR_NON_GROUPS                         = $0008;
   CONFIG_OPTION_OPEN_BRACE_ON_SEPARATE_LINE                             = $0010;
-  {$IFDEF LIBCONFIG_VER_MAJOR    >= 1 AND
-          LIBCONFIG_VER_MINOR    >= 7 AND
-          LIBCONFIG_VER_REVISION >= 0}
+  {$IFDEF LIBCONFIG_VER_1_7_0}
   CONFIG_OPTION_ALLOW_SCIENTIFIC_NOTATION                               = $0020;
   CONFIG_OPTION_FSYNC                                                   = $0040;
   {$ENDIF}
@@ -112,7 +109,7 @@ type
     settings_type : Smallint;
     format : Smallint;
     value : config_value_t;
-    parent : pconfig_settings_t;
+    parent : pconfig_setting_t;
     config : pconfig_t;
     hook : Pointer;
     line : Cardinal;
@@ -121,39 +118,31 @@ type
 
   config_list_t = record
     length : Cardinal;
-    elements : ppconfig_settings_t;
+    elements : ppconfig_setting_t;
   end;
 
   PPChar = ^PChar;
 
   destructor_fn_t = procedure (obj : Pointer) of object;
-  {$IFDEF LIBCONFIG_VER_MAJOR    >= 1 AND
-          LIBCONFIG_VER_MINOR    >= 7 AND
-          LIBCONFIG_VER_REVISION >= 0}
+  {$IFDEF LIBCONFIG_VER_1_7_0}
   config_include_fn_t = function (config : pconfig_t; const include_dir : PChar;
     const path : PChar; const error : PPChar) : PPChar of object;
   {$ENDIF}
 
   config_t = record
-    root : pconfig_settings_t;
+    root : pconfig_setting_t;
     destructor_callback : destructor_fn_t;
     options : Integer;
     tab_width : Word;
-    {$IFDEF LIBCONFIG_VER_MAJOR    <= 1 AND
-            LIBCONFIG_VER_MINOR    <= 5 AND
-            LIBCONFIG_VER_REVISION <= 0}
+    {$IFDEF LIBCONFIG_VER_1_5_0}
     default_format : Smallint;
     {$ENDIF}
-    {$IFDEF LIBCONFIG_VER_MAJOR    >= 1 AND
-            LIBCONFIG_VER_MINOR    >= 7 AND
-            LIBCONFIG_VER_REVISION >= 0}
+    {$IFDEF LIBCONFIG_VER_1_7_0}
     float_precision : Word;
     default_format : Word;
     {$ENDIF}
     include_dir : PChar;
-    {$IFDEF LIBCONFIG_VER_MAJOR    >= 1 AND
-            LIBCONFIG_VER_MINOR    >= 7 AND
-            LIBCONFIG_VER_REVISION >= 0}
+    {$IFDEF LIBCONFIG_VER_1_7_0}
     include_fn : config_include_fn_t;
     {$ENDIF}
     error_text : PChar;
@@ -162,9 +151,7 @@ type
     error_type : config_error_t;
     filenames : PPChar;
     num_filenames : Cardinal;
-    {$IFDEF LIBCONFIG_VER_MAJOR    >= 1 AND
-            LIBCONFIG_VER_MINOR    >= 7 AND
-            LIBCONFIG_VER_REVISION >= 0}
+    {$IFDEF LIBCONFIG_VER_1_7_0}
     hook : Pointer;
     {$ENDIF}
   end;
@@ -178,9 +165,7 @@ procedure config_init (config : pconfig_t); cdecl; external libConfig;
   itself. }
 procedure config_destroy (config : pconfig_t); cdecl; external libConfig;
 
-{$IFDEF LIBCONFIG_VER_MAJOR    >= 1 AND
-        LIBCONFIG_VER_MINOR    >= 7 AND
-        LIBCONFIG_VER_REVISION >= 0}
+{$IFDEF LIBCONFIG_VER_1_7_0}
 { This function clears the configuration config. All child settings of the root
   setting are recursively destroyed. All other attributes of the configuration
   are left unchanged. }
@@ -254,9 +239,7 @@ procedure config_set_include_dir (config : pconfig_t; const include_dir :
   PChar); cdecl; external libConfig;
 function config_get_include_dir (const config : pconfig_t) : PChar; inline;
 
-{$IFDEF LIBCONFIG_VER_MAJOR    >= 1 AND
-        LIBCONFIG_VER_MINOR    >= 7 AND
-        LIBCONFIG_VER_REVISION >= 0}
+{$IFDEF LIBCONFIG_VER_1_7_0}
 { Specifies the include function func to use when processing include directives.
   If func is NULL, the default include function, config_default_include_func(),
   will be reinstated.
@@ -308,9 +291,7 @@ procedure config_set_include_func (config : pconfig_t; func :
   config_include_fn_t); cdecl; external libConfig;
 {$ENDIF}
 
-{$IFDEF LIBCONFIG_VER_MAJOR    >= 1 AND
-        LIBCONFIG_VER_MINOR    >= 7 AND
-        LIBCONFIG_VER_REVISION >= 0}
+{$IFDEF LIBCONFIG_VER_1_7_0}
 { These functions get and set the number of decimal digits to output after the
   radix character when writing the configuration to a file or stream.
 
@@ -378,9 +359,7 @@ function config_get_options (const config : pconfig_t) : Integer; cdecl;
 procedure config_set_options (config : pconfig_t; options : Integer); cdecl;
   external libConfig;
 
-{$IFDEF LIBCONFIG_VER_MAJOR    >= 1 AND
-        LIBCONFIG_VER_MINOR    >= 7 AND
-        LIBCONFIG_VER_REVISION >= 0}
+{$IFDEF LIBCONFIG_VER_1_7_0}
 { These functions get and set the given option of the configuration config. The
   option is enabled if flag is CONFIG_TRUE and disabled if it is CONFIG_FALSE.
 
@@ -391,9 +370,7 @@ procedure config_set_option (config : pconfig_t; option : Integer; flag :
   Integer); cdecl; external libConfig;
 {$ENDIF}
 
-{$IFDEF LIBCONFIG_VER_MAJOR    <= 1 AND
-        LIBCONFIG_VER_MINOR    <= 5 AND
-        LIBCONFIG_VER_REVISION <= 0}
+{$IFDEF LIBCONFIG_VER_1_5_0}
 { These functions get and set the CONFIG_OPTION_AUTO_CONVERT option. They are
   obsoleted by the config_set_option() and config_get_option() functions
   described above. }
@@ -402,9 +379,7 @@ function config_get_auto_convert (const config : pconfig_t) : Integer; cdecl;
 procedure config_set_auto_convert (config : pconfig_t; flag : Integer); cdecl;
   external libConfig;
 {$ENDIF}
-{$IFDEF LIBCONFIG_VER_MAJOR    >= 1 AND
-        LIBCONFIG_VER_MINOR    >= 7 AND
-        LIBCONFIG_VER_REVISION >= 0}
+{$IFDEF LIBCONFIG_VER_1_7_0}
 { These functions get and set the CONFIG_OPTION_AUTO_CONVERT option. They are
   obsoleted by the config_set_option() and config_get_option() functions
   described above. }
@@ -513,7 +488,7 @@ function config_setting_lookup_float (const setting : pconfig_setting_t; const
 function config_setting_lookup_bool (const setting : pconfig_setting_t; const
   name : PChar; value : PInteger) : Integer; cdecl; external libConfig;
 function config_setting_lookup_string (const setting : pconfig_setting_t; const
-  name : PChar; value : PPChar) : Integr; cdecl; external libConfig;
+  name : PChar; value : PPChar) : Integer; cdecl; external libConfig;
 
 { These functions get and set the external format for the setting setting.
 
@@ -691,9 +666,7 @@ function config_setting_source_file (const setting : pconfig_setting_t) : PChar;
 function config_setting_source_line (const setting : pconfig_setting_t) :
     Cardinal; inline;
 
-{$IFDEF LIBCONFIG_VER_MAJOR    >= 1 AND
-        LIBCONFIG_VER_MINOR    >= 7 AND
-        LIBCONFIG_VER_REVISION >= 0}
+{$IFDEF LIBCONFIG_VER_1_7_0}
 { These functions make it possible to attach arbitrary data to a configuration
   structure, for instance a “wrapper” or “peer” object written in another
   programming language. }
@@ -746,9 +719,7 @@ begin
   Result := config^.include_dir;
 end;
 
-{$IFDEF LIBCONFIG_VER_MAJOR    >= 1 AND
-        LIBCONFIG_VER_MINOR    >= 7 AND
-        LIBCONFIG_VER_REVISION >= 0}
+{$IFDEF LIBCONFIG_VER_1_7_0}
 function config_get_auto_convert(const config: pconfig_t): Integer;
 begin
   Result := config_get_option(config, CONFIG_OPTION_AUTOCONVERT);
@@ -799,7 +770,7 @@ end;
 
 function config_setting_is_root(const setting: pconfig_setting_t): Integer;
 begin
-  if setting^.parent then
+  if setting^.parent <> nil then
     Result := CONFIG_FALSE
   else
     Result := CONFIG_TRUE;
@@ -812,38 +783,38 @@ end;
 
 function config_setting_is_group(const setting: pconfig_setting_t): Integer;
 begin
-  Result := setting^.settings_type = CONFIG_TYPE_GROUP;
+  Result := Integer(setting^.settings_type = CONFIG_TYPE_GROUP);
 end;
 
 function config_setting_is_array(const setting: pconfig_setting_t): Integer;
 begin
-  Result := setting^.settings_type = CONFIG_TYPE_ARRAY;
+  Result := Integer(setting^.settings_type = CONFIG_TYPE_ARRAY);
 end;
 
 function config_setting_is_list(const setting: pconfig_setting_t): Integer;
 begin
-  Result := setting^.settings_type = CONFIG_TYPE_LIST;
+  Result := Integer(setting^.settings_type = CONFIG_TYPE_LIST);
 end;
 
 function config_setting_is_aggregate(const setting: pconfig_setting_t): Integer;
 begin
-  Result := (setting^.settings_type = CONFIG_TYPE_GROUP) or
+  Result := Integer((setting^.settings_type = CONFIG_TYPE_GROUP) or
     (setting^.settings_type = CONFIG_TYPE_LIST) or (setting^.settings_type =
-    CONFIG_TYPE_ARRAY);
+    CONFIG_TYPE_ARRAY));
 end;
 
 function config_setting_is_number(const setting: pconfig_setting_t): Integer;
 begin
-  Result := (setting^.settings_type = CONFIG_TYPE_INT) or
+  Result := Integer((setting^.settings_type = CONFIG_TYPE_INT) or
     (setting^.settings_type = CONFIG_TYPE_INT64) or
-    (setting^.settings_type = CONFIG_TYPE_FLOAT);
+    (setting^.settings_type = CONFIG_TYPE_FLOAT));
 end;
 
 function config_setting_is_scalar(const setting: pconfig_setting_t): Integer;
 begin
-  Result := (setting^.settings_type = CONFIG_TYPE_BOOL) or
+  Result := Integer((setting^.settings_type = CONFIG_TYPE_BOOL) or
     (setting^.settings_type = CONFIG_TYPE_STRING) or
-    config_setting_is_number(setting);
+    Boolean(config_setting_is_number(setting)));
 end;
 
 function config_setting_source_file(const setting: pconfig_setting_t): PChar;
@@ -856,9 +827,7 @@ begin
   Result := setting^.line;
 end;
 
-{$IFDEF LIBCONFIG_VER_MAJOR    >= 1 AND
-        LIBCONFIG_VER_MINOR    >= 7 AND
-        LIBCONFIG_VER_REVISION >= 0}
+{$IFDEF LIBCONFIG_VER_1_7_0}
 function config_get_hook(const config: pconfig_t): Pointer;
 begin
   Result := config^.hook;

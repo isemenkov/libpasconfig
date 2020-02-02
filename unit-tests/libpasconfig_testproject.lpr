@@ -3,7 +3,7 @@ program libpasconfig_testproject;
 {$mode objfpc}{$H+}
 
 uses
-  Interfaces, Forms, GuiTestRunner, pasconfigtestcase, libpasconfig;
+  Interfaces, Forms, GuiTestRunner, pasconfigtestcase, libpasconfig, pasconfig;
 
 {$R *.res}
 

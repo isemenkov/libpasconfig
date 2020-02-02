@@ -39,7 +39,7 @@ type
 
   TConfig = class
   private
-    FConfig : config_t;
+    FConfig : pconfig_t;
     FSettings : pconfig_setting_t;
   public
     constructor Create;
@@ -52,12 +52,12 @@ implementation
 
 constructor TConfig.Create;
 begin
-  config_init(FSettings);
+  config_init(FConfig);
 end;
 
 destructor TConfig.Destroy;
 begin
-  config_destroy(FSettings);
+  config_destroy(FConfig);
   inherited Destroy;
 end;
 
