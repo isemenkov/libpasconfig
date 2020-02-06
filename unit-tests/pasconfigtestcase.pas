@@ -18,14 +18,14 @@ type
     procedure TestCreateConfig;
     procedure TestCreateConfigArray;
     procedure TestCreateConfigFile;
-    procedure TestCreateConfigStream;
+    procedure TestCreateConfigReadWriteFile;
   end;
 
 implementation
 
 { TLibConfigTest }
 
-
+{ Create new config and setup test options values }
 procedure TLibConfigTest.TestCreateConfig;
 var
   root, setting, group : pconfig_setting_t;
@@ -60,6 +60,7 @@ begin
   config_destroy(@FConfig);
 end;
 
+{ Create config and add array option }
 procedure TLibConfigTest.TestCreateConfigArray;
 var
   root, arr, setting, group : pconfig_setting_t;
@@ -86,6 +87,7 @@ begin
   config_destroy(@FConfig);
 end;
 
+{ Create config, add some test values and write to file }
 procedure TLibConfigTest.TestCreateConfigFile;
 var
   root, setting, group : pconfig_setting_t;
@@ -114,32 +116,42 @@ begin
   config_destroy(@FConfig);
 end;
 
-procedure TLibConfigTest.TestCreateConfigStream;
+{ Create config, add some test values, write to file and after try to open file
+  and read the tests values }
+procedure TLibConfigTest.TestCreateConfigReadWriteFile;
 var
   root, setting, group : pconfig_setting_t;
-  write_result : Integer;
-  //f : PFile;
+  write_result, read_result : Integer;
+  Value : PChar;
 begin
   config_init(@FConfig);
   root := config_root_setting(@FConfig);
   AssertTrue('Root config element is nil', root <> nil);
 
-  group := config_setting_add(root, 'test', CONFIG_TYPE_GROUP);
-  AssertTrue('Group config element is nil', group <> nil);
+  group := config_setting_add(root, 'Group', CONFIG_TYPE_GROUP);
+  AssertTrue('Config group element is nil', group <> nil);
 
   setting := config_setting_add(group, 'option1', CONFIG_TYPE_STRING);
   AssertTrue('Added ''option1'' option type ''STRING'' is nil', setting <> nil);
-  config_setting_set_string(setting, PChar('option value'));
+  config_setting_set_string(setting, PChar('test value'));
 
   setting := config_setting_add(group, 'option2', CONFIG_TYPE_INT);
   AssertTrue('Added ''option2'' option type ''INT'' is nil', setting <> nil);
-  config_setting_set_int(setting, -5);
+  config_setting_set_int(setting, 1001);
 
-
-
-  config_write(@FConfig, f);
+  write_result := config_write_file(@FConfig, 'test.cfg');
+  AssertTrue('Write config file is error', write_result <> 0);
   AssertTrue('Config file is not exists', FileExists('test.cfg'));
 
+  config_destroy(@FConfig);
+  config_init(@FConfig);
+
+  read_result := config_read_file(@FConfig, 'test.cfg');
+  AssertTrue('Read config file is error', read_result <> 0);
+
+  config_lookup_string(@FConfig, 'Group.option1', @Value);
+  AssertTrue(' ''Group.option1'' config option is not find', Value <> nil);
+  AssertTrue('Option value is not corect', Value = 'test value');
 
   DeleteFile('test.cfg');
   config_destroy(@FConfig);
