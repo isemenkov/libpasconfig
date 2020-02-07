@@ -39,11 +39,22 @@ type
 
   TConfig = class
   private
-    FConfig : pconfig_t;
-    FSettings : pconfig_setting_t;
+    FConfig : config_t;
+    FRootElement : pconfig_settings_t;
   public
     constructor Create;
+    constructor Create (AFilename : string);
     destructor Destroy; override;
+
+    property Group [Name : string] : String write SetGroupName;
+    property Value [Name : string] : Integer read GetIntegerValue write
+      SetIntegerValue;
+    property Value [Name : string] : Float read GetFloatValue write
+      SetFloatValue;
+    property Value [Name : string] : String read GetStringValue write
+      SetStringValue;
+    property Value [Name : string] : Boolean read GetBoolValue write
+      SetBoolValue;
   end;
 
 implementation
@@ -52,12 +63,18 @@ implementation
 
 constructor TConfig.Create;
 begin
-  config_init(FConfig);
+  config_init(@FConfig);
+end;
+
+constructor TConfig.Create(AFilename: string);
+begin
+  config_init(@FConfig);
+  config_read_file(@FConfig, PChar(AFilename));
 end;
 
 destructor TConfig.Destroy;
 begin
-  config_destroy(FConfig);
+  config_destroy(@FConfig);
   inherited Destroy;
 end;
 
