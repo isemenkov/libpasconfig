@@ -40,21 +40,17 @@ type
   TConfig = class
   private
     FConfig : config_t;
-    FRootElement : pconfig_settings_t;
+    FRootElement : pconfig_setting_t;
   public
     constructor Create;
     constructor Create (AFilename : string);
     destructor Destroy; override;
 
-    property Group [Name : string] : String write SetGroupName;
-    property Value [Name : string] : Integer read GetIntegerValue write
-      SetIntegerValue;
-    property Value [Name : string] : Float read GetFloatValue write
-      SetFloatValue;
-    property Value [Name : string] : String read GetStringValue write
-      SetStringValue;
-    property Value [Name : string] : Boolean read GetBoolValue write
-      SetBoolValue;
+    function GetInt (Path : String) : Integer;
+    function GetInt64 (Path : String) : Int64;
+    function GetFloat (Path : String) : Double;
+    function GetBool (Path : String) : Boolean;
+    function GetString (Path : String) : String;
   end;
 
 implementation
@@ -76,6 +72,31 @@ destructor TConfig.Destroy;
 begin
   config_destroy(@FConfig);
   inherited Destroy;
+end;
+
+function TConfig.GetInt(Path: String): Integer;
+begin
+  config_lookup_int(@FConfig, PChar(Path), @Result);
+end;
+
+function TConfig.GetInt64(Path: String): Int64;
+begin
+  config_lookup_int64(@FConfig, PChar(Path), @Result);
+end;
+
+function TConfig.GetFloat(Path: String): Double;
+begin
+  config_lookup_float(@FConfig, PChar(Path), @Result);
+end;
+
+function TConfig.GetBool(Path: String): Boolean;
+begin
+  config_lookup_bool(@FConfig, PChar(Path), @Result);
+end;
+
+function TConfig.GetString(Path: String): String;
+begin
+  config_lookup_string(@FConfig, PChar(Path), PPChar((PChar(Result))));
 end;
 
 end.
