@@ -5,7 +5,7 @@ unit pasconfigtestcase;
 interface
 
 uses
-  Classes, SysUtils, fpcunit, testregistry, libpasconfig;
+  Classes, SysUtils, fpcunit, testregistry, libpasconfig, pasconfig;
 
 type
 
@@ -21,7 +21,58 @@ type
     procedure TestCreateConfigReadWriteFile;
   end;
 
+  { TConfigTest }
+
+  TConfigTest = class(TTestCase)
+  private
+    FConfig : TConfig;
+  published
+    procedure TestCreateConfig;
+  end;
+
 implementation
+
+{ TConfigTest }
+
+procedure TConfigTest.TestCreateConfig;
+var
+  IntValue : Integer;
+  Int64Value : Int64;
+  StringValue : String;
+  BooleanValue : Boolean;
+begin
+  FConfig := TConfig.Create;
+
+  with FConfig.Root do
+  begin
+    with CreateSection('test') do
+    begin
+      SetInteger['option1'] := 456;
+      SetInt64['option2'] := 123456;
+      SetFloat['option3'] := 0.001;
+      SetString['option4'] := 'test value';
+      SetBoolean['option5'] := True;
+    end;
+  end;
+
+  IntValue := FConfig.Value['test.option1'].AsInteger;
+  AssertTrue('Config element ''test.option1'' is incorrect', IntValue =
+    456);
+
+  Int64Value := FConfig.Value['test.option2'].AsInt64;
+  AssertTrue('Config element ''test.option2'' is incorrect', Int64Value =
+    123456);
+
+  StringValue := FConfig.Value['test.option4'].AsString;
+  AssertTrue('Config element ''test.option4'' is incorrect', StringValue =
+    'test value');
+
+  BooleanValue := FConfig.Value['test.option5'].AsBoolean;
+  AssertTrue('Config element ''test.option5'' is incorrect', BooleanValue =
+    True);
+
+  FreeAndNil(FConfig);
+end;
 
 { TLibConfigTest }
 
@@ -159,5 +210,6 @@ end;
 
 initialization
   RegisterTest(TLibConfigTest);
+  RegisterTest(TConfigTest);
 end.
 
