@@ -38,19 +38,71 @@ type
   { TConfig }
 
   TConfig = class
+  public
+    type
+      TConfigOption = class
+      private
+        FOption : pconfig_setting_t;
+      private
+        function GetInteger : Integer; {$IFNDEF DEBUG}inline;{$ENDIF}
+        function GetInt64 : Int64; {$IFNDEF DEBUG}inline;{$ENDIF}
+        function GetFloat : Double; {$IFNDEF DEBUG}inline;{$ENDIF}
+        function GetBoolean : Boolean; {$IFNDEF DEBUG}inline;{$ENDIF}
+        function GetString : String; {$IFNDEF DEBUG}inline;{$ENDIF}
+      public
+        constructor Create (AOption : pconfig_setting_t);
+        destructor Destroy; override;
+
+        property AsInteger : Integer read GetInteger;
+        property AsInt64 : Int64 read GetInt64;
+        property AsFloat : Double read GetFloat;
+        property AsBoolean : Boolean read GetBoolean;
+        property AsString : String read GetString;
+      end;
+
+      TSectionOption = class
+      private
+        FOption : pconfig_setting_t;
+      private
+        procedure SetOptionInteger (Name : String; Value : Integer);
+          {$IFNDEF DEBUG}inline;{$ENDIF}
+        procedure SetOptionInt64 (Name : String; Value : Int64);{$IFNDEF DEBUG}
+          inline;{$ENDIF}
+        procedure SetOptionFloat (Name : String; Value : Double);{$IFNDEF DEBUG}
+          inline;{$ENDIF}
+        procedure SetOptionBoolean (Name : String; Value : Boolean);
+          {$IFNDEF DEBUG}inline;{$ENDIF}
+        procedure SetOptionString (Name : String; Value : String);
+          {$IFNDEF DEBUG}inline;{$ENDIF}
+      public
+        constructor Create (AOption : pconfig_setting_t);
+        destructor Destroy; override;
+
+        property SetInteger [Name : String] : Integer write SetOptionInteger;
+        property SetInt64 [Name : String] : Int64 write SetOptionInt64;
+        property SetFloat [Name : String] : Double write SetOptionFloat;
+        property SetBoolean [Name : String] : Boolean write SetOptionBoolean;
+        property SetString [Name : String] : String write SetOptionString;
+      end;
   private
     FConfig : config_t;
     FRootElement : pconfig_setting_t;
+  private
+    function GetValue (Path : String) : TConfigOption;{$IFNDEF DEBUG}inline;
+      {$ENDIF}
+    function CreateNewSection (Name : String) : TSectionOption; {$IFNDEF DEBUG}
+      inline;{$ENDIF}
   public
     constructor Create;
     constructor Create (AFilename : string);
+    constructor Create (AData : String);
     destructor Destroy; override;
 
-    function GetInt (Path : String) : Integer;
-    function GetInt64 (Path : String) : Int64;
-    function GetFloat (Path : String) : Double;
-    function GetBool (Path : String) : Boolean;
-    function GetString (Path : String) : String;
+    procedure Reload;
+
+    property Value [Path : String] : TConfigOption read GetValue;
+    property CreateSection [Name : String] : TSectionOption read
+      CreateNewSection;
   end;
 
 implementation
@@ -72,31 +124,6 @@ destructor TConfig.Destroy;
 begin
   config_destroy(@FConfig);
   inherited Destroy;
-end;
-
-function TConfig.GetInt(Path: String): Integer;
-begin
-  config_lookup_int(@FConfig, PChar(Path), @Result);
-end;
-
-function TConfig.GetInt64(Path: String): Int64;
-begin
-  config_lookup_int64(@FConfig, PChar(Path), @Result);
-end;
-
-function TConfig.GetFloat(Path: String): Double;
-begin
-  config_lookup_float(@FConfig, PChar(Path), @Result);
-end;
-
-function TConfig.GetBool(Path: String): Boolean;
-begin
-  config_lookup_bool(@FConfig, PChar(Path), @Result);
-end;
-
-function TConfig.GetString(Path: String): String;
-begin
-  config_lookup_string(@FConfig, PChar(Path), PPChar((PChar(Result))));
 end;
 
 end.
