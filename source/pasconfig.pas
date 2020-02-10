@@ -55,10 +55,19 @@ type
       private
         FOption : pconfig_setting_t;
       private
+        { Get option value as integer }
         function GetInteger : Integer; {$IFNDEF DEBUG}inline;{$ENDIF}
+
+        { Get option value as int64 }
         function GetInt64 : Int64; {$IFNDEF DEBUG}inline;{$ENDIF}
+
+        { Get option value as double }
         function GetFloat : Double; {$IFNDEF DEBUG}inline;{$ENDIF}
+
+        { Get option value as boolean }
         function GetBoolean : Boolean; {$IFNDEF DEBUG}inline;{$ENDIF}
+
+        { Get option value as string }
         function GetString : String; {$IFNDEF DEBUG}inline;{$ENDIF}
       public
         constructor Create (AOption : pconfig_setting_t);
@@ -88,14 +97,23 @@ type
       private
         FOption : pconfig_setting_t;
       private
+        { Set option value as integer }
         procedure SetOptionInteger (Name : String; Value : Integer);
           {$IFNDEF DEBUG}inline;{$ENDIF}
+
+        { Set option value as int64 }
         procedure SetOptionInt64 (Name : String; Value : Int64);{$IFNDEF DEBUG}
           inline;{$ENDIF}
+
+        { Set option value as double }
         procedure SetOptionFloat (Name : String; Value : Double);{$IFNDEF DEBUG}
           inline;{$ENDIF}
+
+        { Set option value as boolean }
         procedure SetOptionBoolean (Name : String; Value : Boolean);
           {$IFNDEF DEBUG}inline;{$ENDIF}
+
+        { Set option value as string }
         procedure SetOptionString (Name : String; Value : String);
           {$IFNDEF DEBUG}inline;{$ENDIF}
       public
@@ -125,21 +143,33 @@ type
     FConfig : config_t;
     FRootElement : pconfig_setting_t;
   private
+    { Get option path }
     function GetValue (Path : String) : TConfigOption;{$IFNDEF DEBUG}inline;
       {$ENDIF}
+
+    { Create new values group }
     function CreateNewSection (Name : String) : TSectionOption;{$IFNDEF DEBUG}
       inline;{$ENDIF}
+
+    { Get config root element }
     function GetRoot : TSectionOption;{$IFNDEF DEBUG}inline;{$ENDIF}
   public
     constructor Create;
+
+    { Create config and load data from file }
     constructor Create (AFilename : string);
     destructor Destroy; override;
 
-    { Reread config file }
+    { Reread config from file }
     procedure Reload;
 
+    { Config root option }
     property Root : TSectionOption read GetRoot;
+
+    { Get value path }
     property Value [Path : String] : TConfigOption read GetValue;
+
+    { Create new config group section }
     property CreateSection [Name : String] : TSectionOption read
       CreateNewSection;
   end;
