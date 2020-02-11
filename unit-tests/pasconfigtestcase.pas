@@ -43,16 +43,13 @@ var
 begin
   FConfig := TConfig.Create;
 
-  with FConfig.Root do
+  with FConfig.CreateSection['test'] do
   begin
-    with CreateSection('test') do
-    begin
-      SetInteger['option1'] := 456;
-      SetInt64['option2'] := 123456;
-      SetFloat['option3'] := 0.001;
-      SetString['option4'] := 'test value';
-      SetBoolean['option5'] := True;
-    end;
+    SetInteger['option1'] := 456;
+    SetInt64['option2'] := 123456;
+    SetFloat['option3'] := 0.001;
+    SetString['option4'] := 'test value';
+    SetBoolean['option5'] := True;
   end;
 
   IntValue := FConfig.Value['test.option1'].AsInteger;

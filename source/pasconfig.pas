@@ -116,13 +116,25 @@ type
         { Set option value as string }
         procedure SetOptionString (Name : String; Value : String);
           {$IFNDEF DEBUG}inline;{$ENDIF}
+
+        { Create new option group section }
+        function CreateNewSection (Name : String) : TSectionOption;
+          {$IFNDEF DEBUG}inline;{$ENDIF}
+
+        { Create new array group section }
+        function CreateNewArray (Name : String) : TSectionOption;
+          {$IFNDEF DEBUG}inline;{$ENDIF}
       public
         constructor Create (AOption : pconfig_setting_t);
         destructor Destroy; override;
 
-        { Create new option group section }
-        function CreateSection (Name : String) : TSectionOption;{$IFNDEF DEBUG}
-          inline;{$ENDIF}
+        { Create new config group section }
+        property CreateSection [Name : String] : TSectionOption read
+          CreateNewSection;
+
+        { Create new config array group section }
+        property CreateArray [Name : String] : TSectionOption read
+          CreateNewArray;
 
         { Add new integer value to current group }
         property SetInteger [Name : String] : Integer write SetOptionInteger;
@@ -150,9 +162,6 @@ type
     { Create new values group }
     function CreateNewSection (Name : String) : TSectionOption;{$IFNDEF DEBUG}
       inline;{$ENDIF}
-
-    { Get config root element }
-    function GetRoot : TSectionOption;{$IFNDEF DEBUG}inline;{$ENDIF}
   public
     constructor Create;
 
@@ -162,9 +171,6 @@ type
 
     { Reread config from file }
     procedure Reload;
-
-    { Config root option }
-    property Root : TSectionOption read GetRoot;
 
     { Get value path }
     property Value [Path : String] : TConfigOption read GetValue;
@@ -228,10 +234,16 @@ begin
   inherited Destroy;
 end;
 
-function TConfig.TSectionOption.CreateSection(Name: String): TSectionOption;
+function TConfig.TSectionOption.CreateNewSection(Name: String): TSectionOption;
 begin
   Result := TSectionOption.Create(config_setting_add(FOption, PChar(Name),
     CONFIG_TYPE_GROUP));
+end;
+
+function TConfig.TSectionOption.CreateNewArray(Name: String): TSectionOption;
+begin
+  Result := TSectionOption.Create(config_setting_add(FOption, PChar(Name),
+    CONFIG_TYPE_ARRAY));
 end;
 
 { TConfig.TConfigOption }
@@ -305,13 +317,8 @@ end;
 
 function TConfig.CreateNewSection(Name: String): TSectionOption;
 begin
-  Result := TSectionOption.Create(config_setting_add(@FConfig, PChar(Name),
+  Result := TSectionOption.Create(config_setting_add(FRootElement, PChar(Name),
     CONFIG_TYPE_GROUP));
-end;
-
-function TConfig.GetRoot: TSectionOption;
-begin
-  Result := TSectionOption.Create(config_root_setting(@FConfig));
 end;
 
 constructor TConfig.Create;
