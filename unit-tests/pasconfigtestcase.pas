@@ -148,15 +148,13 @@ begin
   i := 1;
   for Option in FConfig.Value['test.test_list'].AsList do
   begin
-    AssertTrue('Config element ''test.test_list.option' + IntToStr(i) + ''' ' +
-      'has incorrect name', Option.OptionName = 'option' + IntToStr(i));
-
     StringValue := Option.Value['string_value'].AsString;
     AssertTrue('Config element ''option' + IntToStr(i) + '.string_value'' ' +
       'is incorrect value', StringValue = 'Value' + IntToStr(i));
     IntValue := Option.Value['integer_value'].AsInteger;
     AssertTrue('Config element ''option' + IntToStr(i) + '.integer_value'' ' +
       'is incorrect value', IntValue = i + 8);
+    Inc(i);
   end;
 
   FreeAndNil(FConfig);
