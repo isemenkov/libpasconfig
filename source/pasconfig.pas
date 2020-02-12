@@ -43,7 +43,7 @@ type
   ETypeMismatchException = class (Exception);
 
   { Option value not exists }
-  ENotExistsException = class (Exception);
+  EValueNotExistsException = class (Exception);
   {$ENDIF}
 
   { TConfig }
@@ -84,6 +84,9 @@ type
         { Create new array group section }
         function _CreateArray (Name : String) : TOptionWriter;
           {$IFNDEF DEBUG}inline;{$ENDIF}
+
+        { Create new list group section }
+        function _CreateList (Name : String) : TOptionWriter;
       public
         constructor Create (AOption : pconfig_setting_t);
         destructor Destroy; override;
@@ -95,6 +98,10 @@ type
         { Create new config array group section }
         property CreateArray [Name : String] : TOptionWriter read
           _CreateArray;
+
+        { Create new config list group section }
+        property CreateList [Name : String] : TOptionWriter read
+          _CreateList;
 
         { Add new integer value to current group }
         property SetInteger [Name : String] : Integer write _SetInteger;
@@ -126,10 +133,8 @@ type
             TYPE_BOOLEAN
           );
 
-          { Array collection enumerator }
-
           { TArrayEnumerator }
-
+          { Array collection enumerator }
           TArrayEnumerator = class
           protected
             FOption : pconfig_setting_t;
@@ -142,6 +147,21 @@ type
             property Current : TOptionReader read GetCurrent;
             function GetEnumerator : TArrayEnumerator; inline;
           end;
+
+          { TListEnumerator }
+          { List collection enumerator }
+          TListEnumerator = class
+          protected
+            FOption : pconfig_setting_t;
+            FCount : Integer;
+            FPosition : Cardinal;
+            function GetCurrent : TOptionReader; inline;
+          public
+            constructor Create (AOption : pconfig_setting_t);
+            function MoveNext : Boolean; inline;
+            property Current : TOptionReader read GetCurrent;
+            function GetEnumerator : TListEnumerator; inline;
+          end;
       private
         FOption : pconfig_setting_t;
       private
@@ -153,6 +173,10 @@ type
 
         { Get option name }
         function _GetName : String;{$IFNDEF DEBUG}inline;{$ENDIF}
+
+        { Get option value by path }
+        function _GetValue (Path : String) : TOptionReader;{$IFNDEF DEBUG}
+          inline;{$ENDIF}
 
         { Get option value as integer }
         function _GetInteger : Integer;{$IFNDEF DEBUG}inline;{$ENDIF}
@@ -174,8 +198,12 @@ type
           inline;{$ENDIF}
 
         { Create new array group section }
-        function _CreateArray (Name : String) : TOptionWriter;
-          {$IFNDEF DEBUG}inline;{$ENDIF}
+        function _CreateArray (Name : String) : TOptionWriter;{$IFNDEF DEBUG}
+          inline;{$ENDIF}
+
+        { Create new list group section }
+        function _CreateList (Name : String) : TOptionWriter;{$IFNDEF DEBUG}
+          inline;{$ENDIF}
       public
         constructor Create (AOption : pconfig_setting_t);
         destructor Destroy; override;
@@ -188,6 +216,9 @@ type
 
         { Return option name }
         property OptionName : String read _GetName;
+
+        { Return option value by path }
+        property Value [Path : String] : TOptionReader read _GetValue;
 
         { Read option data value }
         { Present option value as integer type }
@@ -208,6 +239,9 @@ type
         { Return array group enumerator }
         function AsArray : TArrayEnumerator;{$IFNDEF DEBUG}inline;{$ENDIF}
 
+        { Return list group enumerator }
+        function AsList : TListEnumerator;{$IFNDEF DEBUG}inline;{$ENDIF}
+
         { Write option data value }
         { Create new config group section }
         property CreateSection [Name : String] : TOptionWriter read
@@ -216,6 +250,10 @@ type
         { Create new config array group section }
         property CreateArray [Name : String] : TOptionWriter read
           _CreateArray;
+
+        { Create new config list group section }
+        property CreateList [Name : String] : TOptionWriter read
+          _CreateList;
       end;
   private
     FConfig : config_t;
@@ -230,8 +268,12 @@ type
       inline;{$ENDIF}
 
     { Create new array group section }
-    function _CreateArray (Name : String) : TOptionWriter;
-      {$IFNDEF DEBUG}inline;{$ENDIF}
+    function _CreateArray (Name : String) : TOptionWriter;{$IFNDEF DEBUG}
+      inline;{$ENDIF}
+
+    { Create new list group section }
+    function _CreateList (Name : String) : TOptionWriter;{$IFNDEF DEBUG}inline;
+      {$ENDIF}
   public
     constructor Create;
     constructor Create (AFilename : string); { Create config and load data  }
@@ -354,6 +396,12 @@ begin
     CONFIG_TYPE_ARRAY));
 end;
 
+function TConfig.TOptionWriter._CreateList(Name: String): TOptionWriter;
+begin
+  Result := TOptionWriter.Create(config_setting_add(FOption, PChar(Name),
+    CONFIG_TYPE_LIST));
+end;
+
 { TConfig.TOptionReader.TArrayEnumerator }
 
 constructor TConfig.TOptionReader.TArrayEnumerator.Create(
@@ -380,6 +428,32 @@ begin
   Result := Self;
 end;
 
+{ TConfig.TOptionReader.TListEnumerator }
+
+constructor TConfig.TOptionReader.TListEnumerator.Create(
+  AOption: pconfig_setting_t);
+begin
+  FOption := AOption;
+  FPosition := 0;
+  FCount := config_setting_length(FOption);
+end;
+
+function TConfig.TOptionReader.TListEnumerator.GetCurrent: TOptionReader;
+begin
+  Result := TOptionReader.Create(config_setting_get_elem(FOption, FPosition));
+  Inc(FPosition);
+end;
+
+function TConfig.TOptionReader.TListEnumerator.MoveNext: Boolean;
+begin
+  Result := FPosition < FCount;
+end;
+
+function TConfig.TOptionReader.TListEnumerator.GetEnumerator: TListEnumerator;
+begin
+  Result := Self;
+end;
+
 { TConfig.TOptionReader }
 
 constructor TConfig.TOptionReader.Create(AOption: pconfig_setting_t);
@@ -401,6 +475,11 @@ begin
   Result := TArrayEnumerator.Create(FOption);
 end;
 
+function TConfig.TOptionReader.AsList: TListEnumerator;
+begin
+
+end;
+
 function TConfig.TOptionReader._GetParent: TOptionReader;
 begin
   Result := TOptionReader.Create(config_setting_parent(FOption));
@@ -414,6 +493,15 @@ end;
 function TConfig.TOptionReader._GetName: String;
 begin
   Result := config_setting_name(FOption);
+end;
+
+function TConfig.TOptionReader._GetValue(Path: String): TOptionReader;
+begin
+  Result := TOptionReader.Create(config_setting_lookup(FOption, PChar(Path)));
+  {$IFDEF USE_EXCEPTIONS}
+  if Result.FOption = nil then
+    raise EValueNotExistsException.Create('Value ''' + Path + ''' not exists');
+  {$ENDIF}
 end;
 
 function TConfig.TOptionReader._GetInteger: Integer;
@@ -476,6 +564,11 @@ begin
   Result := TOptionWriter.Create(FOption)._CreateArray(Name);
 end;
 
+function TConfig.TOptionReader._CreateList(Name: String): TOptionWriter;
+begin
+  Result := TOptionWriter.Create(FOption)._CreateList(Name);
+end;
+
 { TConfig }
 
 constructor TConfig.Create;
@@ -499,11 +592,7 @@ end;
 
 function TConfig._GetValue(Path: String): TOptionReader;
 begin
-  Result := TOptionReader.Create(config_lookup(@FConfig, PChar(Path)));
-  {$IFDEF USE_EXCEPTIONS}
-  if Result.FOption = nil then
-    raise ENotExistsException.Create('Value ''' + Path + ''' not exists');
-  {$ENDIF}
+  Result := TOptionReader.Create(FRootElement)._GetValue(Path);
 end;
 
 function TConfig._CreateSection(Name: String): TOptionWriter;
@@ -514,6 +603,11 @@ end;
 function TConfig._CreateArray(Name : String): TOptionWriter;
 begin
   Result := TOptionWriter.Create(FRootElement)._CreateArray(Name);
+end;
+
+function TConfig._CreateList(Name: String): TOptionWriter;
+begin
+  Result := TOptionWriter.Create(FRootElement)._CreateList(Name);
 end;
 
 procedure TConfig.Reload;

@@ -29,6 +29,7 @@ type
   published
     procedure TestCreateConfig;
     procedure TestCreateConfigArray;
+    procedure TestCreateConfigList;
   end;
 
 implementation
@@ -116,6 +117,44 @@ begin
     AssertTrue('Config ''array.test_array'' array element is incorrect value',
       IntValue = i);
     Inc(i);
+  end;
+
+  FreeAndNil(FConfig);
+end;
+
+procedure TConfigTest.TestCreateConfigList;
+var
+  Option : TConfig.TOptionReader;
+  IntValue : Integer;
+  StringValue : String;
+  i : Integer;
+begin
+  FConfig := TConfig.Create;
+
+  with FConfig.CreateSection['test'].CreateList['test_list'] do
+  begin
+    for i := 1 to 10 do
+    begin
+      with CreateSection['option' + IntToStr(i)] do
+      begin
+        SetString['string_value'] := 'Value' + IntToStr(i);
+        SetInteger['integer_value'] := i + 8;
+      end;
+    end;
+  end;
+
+  i := 1;
+  for Option in FConfig.Value['test.test_list'].AsList do
+  begin
+    AssertTrue('Config element ''test.test_list.option' + IntToStr(i) + ''' ' +
+      'has incorrect name', Option.OptionName = 'option' + IntToStr(i));
+
+    StringValue := Option.Value['string_value'].AsString;
+    AssertTrue('Config element ''option' + IntToStr(i) + '.string_value'' ' +
+      'is incorrect value', StringValue = 'Value' + IntToStr(i));
+    IntValue := Option.Value['integer_value'].AsInteger;
+    AssertTrue('Config element ''option' + IntToStr(i) + '.integer_value'' ' +
+      'is incorrect value', IntValue = i + 8);
   end;
 
   FreeAndNil(FConfig);
