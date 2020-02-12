@@ -42,6 +42,8 @@ type
   { Option type cann't present by selected type }
   ETypeMismatchException = class (Exception);
 
+  { Option value not exists }
+  ENotExistsException = class (Exception);
   {$ENDIF}
 
   { TConfig }
@@ -49,142 +51,172 @@ type
   TConfig = class
   public
     type
-      { TConfigOption }
-      { Reading configuration option value }
-      TConfigOption = class
-      private
-        FOption : pconfig_setting_t;
-      private
-        { Get option value as integer }
-        function GetInteger : Integer; {$IFNDEF DEBUG}inline;{$ENDIF}
-
-        { Get option value as int64 }
-        function GetInt64 : Int64; {$IFNDEF DEBUG}inline;{$ENDIF}
-
-        { Get option value as double }
-        function GetFloat : Double; {$IFNDEF DEBUG}inline;{$ENDIF}
-
-        { Get option value as boolean }
-        function GetBoolean : Boolean; {$IFNDEF DEBUG}inline;{$ENDIF}
-
-        { Get option value as string }
-        function GetString : String; {$IFNDEF DEBUG}inline;{$ENDIF}
-      public
-        constructor Create (AOption : pconfig_setting_t);
-        destructor Destroy; override;
-
-        { Present option value as integer type }
-        property AsInteger : Integer read GetInteger;
-
-        { Present option value as int64 type }
-        property AsInt64 : Int64 read GetInt64;
-
-        { Present option value as double type }
-        property AsFloat : Double read GetFloat;
-
-        { Present option value as boolean type }
-        property AsBoolean : Boolean read GetBoolean;
-
-        { Present option value as string type }
-        property AsString : String read GetString;
-      end;
-
-      { Configuration group values }
-
-      { TSectionOption }
-
-      TSectionOption = class
+      { TOptionWriter }
+      { Writer for configuration option }
+      TOptionWriter = class
       private
         FOption : pconfig_setting_t;
       private
         { Set option value as integer }
-        procedure SetOptionInteger (Name : String; Value : Integer);
+        procedure _SetInteger (Name : String; Value : Integer);
           {$IFNDEF DEBUG}inline;{$ENDIF}
 
         { Set option value as int64 }
-        procedure SetOptionInt64 (Name : String; Value : Int64);{$IFNDEF DEBUG}
+        procedure _SetInt64 (Name : String; Value : Int64);{$IFNDEF DEBUG}
           inline;{$ENDIF}
 
         { Set option value as double }
-        procedure SetOptionFloat (Name : String; Value : Double);{$IFNDEF DEBUG}
+        procedure _SetFloat (Name : String; Value : Double);{$IFNDEF DEBUG}
           inline;{$ENDIF}
 
         { Set option value as boolean }
-        procedure SetOptionBoolean (Name : String; Value : Boolean);
+        procedure _SetBoolean (Name : String; Value : Boolean);
           {$IFNDEF DEBUG}inline;{$ENDIF}
 
         { Set option value as string }
-        procedure SetOptionString (Name : String; Value : String);
+        procedure _SetString (Name : String; Value : String);
           {$IFNDEF DEBUG}inline;{$ENDIF}
 
         { Create new option group section }
-        function CreateNewSection (Name : String) : TSectionOption;
-          {$IFNDEF DEBUG}inline;{$ENDIF}
+        function _CreateSection (Name : String) : TOptionWriter;{$IFNDEF DEBUG}
+          inline;{$ENDIF}
 
         { Create new array group section }
-        function CreateNewArray (Name : String) : TSectionOption;
+        function _CreateArray (Name : String) : TOptionWriter;
           {$IFNDEF DEBUG}inline;{$ENDIF}
       public
         constructor Create (AOption : pconfig_setting_t);
         destructor Destroy; override;
 
         { Create new config group section }
-        property CreateSection [Name : String] : TSectionOption read
-          CreateNewSection;
+        property CreateSection [Name : String] : TOptionWriter read
+          _CreateSection;
 
         { Create new config array group section }
-        property CreateArray [Name : String] : TSectionOption read
-          CreateNewArray;
+        property CreateArray [Name : String] : TOptionWriter read
+          _CreateArray;
 
         { Add new integer value to current group }
-        property SetInteger [Name : String] : Integer write SetOptionInteger;
+        property SetInteger [Name : String] : Integer write _SetInteger;
 
         { Add new int64 value to current group }
-        property SetInt64   [Name : String] : Int64 write SetOptionInt64;
+        property SetInt64   [Name : String] : Int64 write _SetInt64;
 
         { Add new double value to current group }
-        property SetFloat   [Name : String] : Double write SetOptionFloat;
+        property SetFloat   [Name : String] : Double write _SetFloat;
 
         { Add new boolean value to current group }
-        property SetBoolean [Name : String] : Boolean write SetOptionBoolean;
+        property SetBoolean [Name : String] : Boolean write _SetBoolean;
 
         { Add new string value to current group }
-        property SetString  [Name : String] : String write SetOptionString;
+        property SetString  [Name : String] : String write _SetString;
+      end;
+
+      { TOptionReader }
+      { Reader for configuration option }
+      TOptionReader = class
+      private
+        FOption : pconfig_setting_t;
+      private
+        { Get option value as integer }
+        function _GetInteger : Integer; {$IFNDEF DEBUG}inline;{$ENDIF}
+
+        { Get option value as int64 }
+        function _GetInt64 : Int64; {$IFNDEF DEBUG}inline;{$ENDIF}
+
+        { Get option value as double }
+        function _GetFloat : Double; {$IFNDEF DEBUG}inline;{$ENDIF}
+
+        { Get option value as boolean }
+        function _GetBoolean : Boolean; {$IFNDEF DEBUG}inline;{$ENDIF}
+
+        { Get option value as string }
+        function _GetString : String; {$IFNDEF DEBUG}inline;{$ENDIF}
+
+        { Create new option group section }
+        function _CreateSection (Name : String) : TOptionWriter;{$IFNDEF DEBUG}
+          inline;{$ENDIF}
+
+        { Create new array group section }
+        function _CreateArray (Name : String) : TOptionWriter;
+          {$IFNDEF DEBUG}inline;{$ENDIF}
+      public
+        constructor Create (AOption : pconfig_setting_t);
+        destructor Destroy; override;
+
+        { Read option data value }
+        { Present option value as integer type }
+        property AsInteger : Integer read _GetInteger;
+
+        { Present option value as int64 type }
+        property AsInt64 : Int64 read _GetInt64;
+
+        { Present option value as double type }
+        property AsFloat : Double read _GetFloat;
+
+        { Present option value as boolean type }
+        property AsBoolean : Boolean read _GetBoolean;
+
+        { Present option value as string type }
+        property AsString : String read _GetString;
+
+        { Write option data value }
+        { Create new config group section }
+        property CreateSection [Name : String] : TOptionWriter read
+          _CreateSection;
+
+        { Create new config array group section }
+        property CreateArray [Name : String] : TOptionWriter read
+          _CreateArray;
       end;
   private
     FConfig : config_t;
     FRootElement : pconfig_setting_t;
+    function _CreateArray(Name : String): TOptionWriter;
   private
     { Get option path }
-    function GetValue (Path : String) : TConfigOption;{$IFNDEF DEBUG}inline;
+    function _GetValue (Path : String) : TOptionReader;{$IFNDEF DEBUG}inline;
       {$ENDIF}
 
     { Create new values group }
-    function CreateNewSection (Name : String) : TSectionOption;{$IFNDEF DEBUG}
+    function _CreateSection (Name : String) : TOptionWriter;{$IFNDEF DEBUG}
       inline;{$ENDIF}
   public
     constructor Create;
-
-    { Create config and load data from file }
-    constructor Create (AFilename : string);
+    constructor Create (AFilename : string); { Create config and load data  }
+                                             { from file }
     destructor Destroy; override;
 
-    { Reread config from file }
+    { Reload config data from file }
     procedure Reload;
 
-    { Get value path }
-    property Value [Path : String] : TConfigOption read GetValue;
+    { Try to read value path }
+    property Value [Path : String] : TOptionReader read _GetValue;
 
     { Create new config group section }
-    property CreateSection [Name : String] : TSectionOption read
-      CreateNewSection;
+    property CreateSection [Name : String] : TOptionWriter read
+      _CreateSection;
+
+    { Create new config array group section }
+    property CreateArray [Name : String] : TOptionWriter read
+      _CreateArray;
   end;
 
 implementation
 
-{ TConfig.TSectionOption }
+{ TConfig.TOptionWriter }
 
-procedure TConfig.TSectionOption.SetOptionInteger(Name: String; Value: Integer);
+constructor TConfig.TOptionWriter.Create(AOption: pconfig_setting_t);
+begin
+  FOption := AOption;
+end;
+
+destructor TConfig.TOptionWriter.Destroy;
+begin
+  inherited Destroy;
+end;
+
+procedure TConfig.TOptionWriter._SetInteger(Name: String; Value: Integer);
 var
   setting : pconfig_setting_t;
 begin
@@ -192,7 +224,7 @@ begin
   config_setting_set_int(setting, Value);
 end;
 
-procedure TConfig.TSectionOption.SetOptionInt64(Name: String; Value: Int64);
+procedure TConfig.TOptionWriter._SetInt64(Name: String; Value: Int64);
 var
   setting : pconfig_setting_t;
 begin
@@ -200,7 +232,7 @@ begin
   config_setting_set_int64(setting, Value);
 end;
 
-procedure TConfig.TSectionOption.SetOptionFloat(Name: String; Value: Double);
+procedure TConfig.TOptionWriter._SetFloat(Name: String; Value: Double);
 var
   setting : pconfig_setting_t;
 begin
@@ -208,7 +240,7 @@ begin
   config_setting_set_float(setting, Value);
 end;
 
-procedure TConfig.TSectionOption.SetOptionBoolean(Name: String; Value: Boolean);
+procedure TConfig.TOptionWriter._SetBoolean(Name: String; Value: Boolean);
 var
   setting : pconfig_setting_t;
 begin
@@ -216,7 +248,7 @@ begin
   config_setting_set_bool(setting, Integer(Value));
 end;
 
-procedure TConfig.TSectionOption.SetOptionString(Name: String; Value: String);
+procedure TConfig.TOptionWriter._SetString(Name: String; Value: String);
 var
   setting : pconfig_setting_t;
 begin
@@ -224,31 +256,31 @@ begin
   config_setting_set_string(setting, PChar(Value));
 end;
 
-constructor TConfig.TSectionOption.Create(AOption: pconfig_setting_t);
+function TConfig.TOptionWriter._CreateSection(Name: String): TOptionWriter;
+begin
+  Result := TOptionWriter.Create(config_setting_add(FOption, PChar(Name),
+    CONFIG_TYPE_GROUP));
+end;
+
+function TConfig.TOptionWriter._CreateArray(Name : String): TOptionWriter;
+begin
+  Result := TOptionWriter.Create(config_setting_add(FOption, PChar(Name),
+    CONFIG_TYPE_ARRAY));
+end;
+
+{ TConfig.TOptionReader }
+
+constructor TConfig.TOptionReader.Create(AOption: pconfig_setting_t);
 begin
   FOption := AOption;
 end;
 
-destructor TConfig.TSectionOption.Destroy;
+destructor TConfig.TOptionReader.Destroy;
 begin
   inherited Destroy;
 end;
 
-function TConfig.TSectionOption.CreateNewSection(Name: String): TSectionOption;
-begin
-  Result := TSectionOption.Create(config_setting_add(FOption, PChar(Name),
-    CONFIG_TYPE_GROUP));
-end;
-
-function TConfig.TSectionOption.CreateNewArray(Name: String): TSectionOption;
-begin
-  Result := TSectionOption.Create(config_setting_add(FOption, PChar(Name),
-    CONFIG_TYPE_ARRAY));
-end;
-
-{ TConfig.TConfigOption }
-
-function TConfig.TConfigOption.GetInteger: Integer;
+function TConfig.TOptionReader._GetInteger: Integer;
 begin
   {$IFDEF USE_EXCEPTIONS}
   if config_setting_type(FOption) <> CONFIG_TYPE_INT then
@@ -258,7 +290,7 @@ begin
   Result := config_setting_get_int(FOption);
 end;
 
-function TConfig.TConfigOption.GetInt64: Int64;
+function TConfig.TOptionReader._GetInt64: Int64;
 begin
   {$IFDEF USE_EXCEPTIONS}
   if config_setting_type(FOption) <> CONFIG_TYPE_INT64 then
@@ -268,7 +300,7 @@ begin
   Result := config_setting_get_int64(FOption);
 end;
 
-function TConfig.TConfigOption.GetFloat: Double;
+function TConfig.TOptionReader._GetFloat: Double;
 begin
   {$IFDEF USE_EXCEPTIONS}
   if config_setting_type(FOption) <> CONFIG_TYPE_FLOAT then
@@ -278,7 +310,7 @@ begin
   Result := config_setting_get_float(FOption);
 end;
 
-function TConfig.TConfigOption.GetBoolean: Boolean;
+function TConfig.TOptionReader._GetBoolean: Boolean;
 begin
   {$IFDEF USE_EXCEPTIONS}
   if config_setting_type(FOption) <> CONFIG_TYPE_BOOL then
@@ -288,7 +320,7 @@ begin
   Result := Boolean(config_setting_get_bool(FOption));
 end;
 
-function TConfig.TConfigOption.GetString: String;
+function TConfig.TOptionReader._GetString: String;
 begin
   {$IFDEF USE_EXCEPTIONS}
   if config_setting_type(FOption) <> CONFIG_TYPE_STRING then
@@ -298,28 +330,17 @@ begin
   Result := config_setting_get_string(FOption);
 end;
 
-constructor TConfig.TConfigOption.Create(AOption: pconfig_setting_t);
+function TConfig.TOptionReader._CreateSection(Name: String): TOptionWriter;
 begin
-  FOption := AOption;
+  Result := TOptionWriter.Create(FOption)._CreateSection(Name);
 end;
 
-destructor TConfig.TConfigOption.Destroy;
+function TConfig.TOptionReader._CreateArray(Name : String): TOptionWriter;
 begin
-  inherited Destroy;
+  Result := TOptionWriter.Create(FOption)._CreateArray(Name);
 end;
 
 { TConfig }
-
-function TConfig.GetValue(Path: String): TConfigOption;
-begin
-  Result := TConfigOption.Create(config_lookup(@FConfig, PChar(Path)));
-end;
-
-function TConfig.CreateNewSection(Name: String): TSectionOption;
-begin
-  Result := TSectionOption.Create(config_setting_add(FRootElement, PChar(Name),
-    CONFIG_TYPE_GROUP));
-end;
 
 constructor TConfig.Create;
 begin
@@ -338,6 +359,25 @@ destructor TConfig.Destroy;
 begin
   config_destroy(@FConfig);
   inherited Destroy;
+end;
+
+function TConfig._GetValue(Path: String): TOptionReader;
+begin
+  Result := TOptionReader.Create(config_lookup(@FConfig, PChar(Path)));
+  {$IFDEF USE_EXCEPTIONS}
+  if Result.FOption = nil then
+    raise ENotExistsException.Create('Value ''' + Path + ''' not exists');
+  {$ENDIF}
+end;
+
+function TConfig._CreateSection(Name: String): TOptionWriter;
+begin
+  Result := TOptionWriter.Create(FRootElement)._CreateSection(Name);
+end;
+
+function TConfig._CreateArray(Name : String): TOptionWriter;
+begin
+  Result := TOptionWriter.Create(FRootElement)._CreateArray(Name);
 end;
 
 procedure TConfig.Reload;
