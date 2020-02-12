@@ -115,23 +115,59 @@ type
       { TOptionReader }
       { Reader for configuration option }
       TOptionReader = class
+      public
+        type
+          { Option value type }
+          TOptionType = (
+            TYPE_INTEGER,
+            TYPE_INT64,
+            TYPE_FLOAT,
+            TYPE_STRING,
+            TYPE_BOOLEAN
+          );
+
+          { Array collection enumerator }
+
+          { TArrayEnumerator }
+
+          TArrayEnumerator = class
+          protected
+            FOption : pconfig_setting_t;
+            FCount : Integer;
+            FPosition : Cardinal;
+            function GetCurrent : TOptionReader; inline;
+          public
+            constructor Create (AOption : pconfig_setting_t);
+            function MoveNext : Boolean; inline;
+            property Current : TOptionReader read GetCurrent;
+            function GetEnumerator : TArrayEnumerator; inline;
+          end;
       private
         FOption : pconfig_setting_t;
       private
+        { Get option element parent }
+        function _GetParent : TOptionReader;{$IFNDEF DEBUG}inline;{$ENDIF}
+
+        { Get option value type }
+        function _GetType : TOptionType;{$IFNDEF DEBUG}inline;{$ENDIF}
+
+        { Get option name }
+        function _GetName : String;{$IFNDEF DEBUG}inline;{$ENDIF}
+
         { Get option value as integer }
-        function _GetInteger : Integer; {$IFNDEF DEBUG}inline;{$ENDIF}
+        function _GetInteger : Integer;{$IFNDEF DEBUG}inline;{$ENDIF}
 
         { Get option value as int64 }
-        function _GetInt64 : Int64; {$IFNDEF DEBUG}inline;{$ENDIF}
+        function _GetInt64 : Int64;{$IFNDEF DEBUG}inline;{$ENDIF}
 
         { Get option value as double }
-        function _GetFloat : Double; {$IFNDEF DEBUG}inline;{$ENDIF}
+        function _GetFloat : Double;{$IFNDEF DEBUG}inline;{$ENDIF}
 
         { Get option value as boolean }
-        function _GetBoolean : Boolean; {$IFNDEF DEBUG}inline;{$ENDIF}
+        function _GetBoolean : Boolean;{$IFNDEF DEBUG}inline;{$ENDIF}
 
         { Get option value as string }
-        function _GetString : String; {$IFNDEF DEBUG}inline;{$ENDIF}
+        function _GetString : String;{$IFNDEF DEBUG}inline;{$ENDIF}
 
         { Create new option group section }
         function _CreateSection (Name : String) : TOptionWriter;{$IFNDEF DEBUG}
@@ -143,6 +179,15 @@ type
       public
         constructor Create (AOption : pconfig_setting_t);
         destructor Destroy; override;
+
+        { Return option element parent }
+        property OptionParent : TOptionReader read _GetParent;
+
+        { Return option value type }
+        property OptionType : TOptionType read _GetType;
+
+        { Return option name }
+        property OptionName : String read _GetName;
 
         { Read option data value }
         { Present option value as integer type }
@@ -160,6 +205,9 @@ type
         { Present option value as string type }
         property AsString : String read _GetString;
 
+        { Return array group enumerator }
+        function AsArray : TArrayEnumerator;{$IFNDEF DEBUG}inline;{$ENDIF}
+
         { Write option data value }
         { Create new config group section }
         property CreateSection [Name : String] : TOptionWriter read
@@ -172,7 +220,6 @@ type
   private
     FConfig : config_t;
     FRootElement : pconfig_setting_t;
-    function _CreateArray(Name : String): TOptionWriter;
   private
     { Get option path }
     function _GetValue (Path : String) : TOptionReader;{$IFNDEF DEBUG}inline;
@@ -181,6 +228,10 @@ type
     { Create new values group }
     function _CreateSection (Name : String) : TOptionWriter;{$IFNDEF DEBUG}
       inline;{$ENDIF}
+
+    { Create new array group section }
+    function _CreateArray (Name : String) : TOptionWriter;
+      {$IFNDEF DEBUG}inline;{$ENDIF}
   public
     constructor Create;
     constructor Create (AFilename : string); { Create config and load data  }
@@ -220,6 +271,13 @@ procedure TConfig.TOptionWriter._SetInteger(Name: String; Value: Integer);
 var
   setting : pconfig_setting_t;
 begin
+  if config_setting_type(FOption) = CONFIG_TYPE_ARRAY then
+  begin
+    setting := config_setting_add(FOption, nil, CONFIG_TYPE_INT);
+    config_setting_set_int(setting, Value);
+    Exit;
+  end;
+
   setting := config_setting_add(FOption, PChar(Name), CONFIG_TYPE_INT);
   config_setting_set_int(setting, Value);
 end;
@@ -228,6 +286,13 @@ procedure TConfig.TOptionWriter._SetInt64(Name: String; Value: Int64);
 var
   setting : pconfig_setting_t;
 begin
+  if config_setting_type(FOption) = CONFIG_TYPE_ARRAY then
+  begin
+    setting := config_setting_add(FOption, nil, CONFIG_TYPE_INT64);
+    config_setting_set_int64(setting, Value);
+    Exit;
+  end;
+
   setting := config_setting_add(FOption, PChar(Name), CONFIG_TYPE_INT64);
   config_setting_set_int64(setting, Value);
 end;
@@ -236,6 +301,13 @@ procedure TConfig.TOptionWriter._SetFloat(Name: String; Value: Double);
 var
   setting : pconfig_setting_t;
 begin
+  if config_setting_type(FOption) = CONFIG_TYPE_ARRAY then
+  begin
+    setting := config_setting_add(FOption, nil, CONFIG_TYPE_FLOAT);
+    config_setting_set_float(setting, Value);
+    Exit;
+  end;
+
   setting := config_setting_add(FOption, PChar(Name), CONFIG_TYPE_FLOAT);
   config_setting_set_float(setting, Value);
 end;
@@ -244,6 +316,13 @@ procedure TConfig.TOptionWriter._SetBoolean(Name: String; Value: Boolean);
 var
   setting : pconfig_setting_t;
 begin
+  if config_setting_type(FOption) = CONFIG_TYPE_ARRAY then
+  begin
+    setting := config_setting_add(FOption, nil, CONFIG_TYPE_BOOL);
+    config_setting_set_bool(setting, Integer(Value));
+    Exit;
+  end;
+
   setting := config_setting_add(FOption, PChar(Name), CONFIG_TYPE_BOOL);
   config_setting_set_bool(setting, Integer(Value));
 end;
@@ -252,6 +331,13 @@ procedure TConfig.TOptionWriter._SetString(Name: String; Value: String);
 var
   setting : pconfig_setting_t;
 begin
+  if config_setting_type(FOption) = CONFIG_TYPE_ARRAY then
+  begin
+    setting := config_setting_add(FOption, nil, CONFIG_TYPE_STRING);
+    config_setting_set_string(setting, PChar(Value));
+    Exit;
+  end;
+
   setting := config_setting_add(FOption, PChar(Name), CONFIG_TYPE_STRING);
   config_setting_set_string(setting, PChar(Value));
 end;
@@ -268,6 +354,32 @@ begin
     CONFIG_TYPE_ARRAY));
 end;
 
+{ TConfig.TOptionReader.TArrayEnumerator }
+
+constructor TConfig.TOptionReader.TArrayEnumerator.Create(
+  AOption: pconfig_setting_t);
+begin
+  FOption := AOption;
+  FPosition := 0;
+  FCount := config_setting_length(FOption);
+end;
+
+function TConfig.TOptionReader.TArrayEnumerator.GetCurrent: TOptionReader;
+begin
+  Result := TOptionReader.Create(config_setting_get_elem(FOption, FPosition));
+  Inc(FPosition);
+end;
+
+function TConfig.TOptionReader.TArrayEnumerator.MoveNext: Boolean;
+begin
+  Result := FPosition < FCount;
+end;
+
+function TConfig.TOptionReader.TArrayEnumerator.GetEnumerator: TArrayEnumerator;
+begin
+  Result := Self;
+end;
+
 { TConfig.TOptionReader }
 
 constructor TConfig.TOptionReader.Create(AOption: pconfig_setting_t);
@@ -278,6 +390,30 @@ end;
 destructor TConfig.TOptionReader.Destroy;
 begin
   inherited Destroy;
+end;
+
+function TConfig.TOptionReader.AsArray: TArrayEnumerator;
+begin
+  {$IFDEF USE_EXCEPTIONS}
+  if config_setting_type(FOption) <> CONFIG_TYPE_ARRAY then
+    raise ETypeMismatchException.Create('Option type can''t present as array');
+  {$ENDIF}
+  Result := TArrayEnumerator.Create(FOption);
+end;
+
+function TConfig.TOptionReader._GetParent: TOptionReader;
+begin
+  Result := TOptionReader.Create(config_setting_parent(FOption));
+end;
+
+function TConfig.TOptionReader._GetType: TOptionType;
+begin
+  Result := TOptionType(config_setting_type(FOption) - 2);
+end;
+
+function TConfig.TOptionReader._GetName: String;
+begin
+  Result := config_setting_name(FOption);
 end;
 
 function TConfig.TOptionReader._GetInteger: Integer;

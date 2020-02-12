@@ -28,6 +28,7 @@ type
     FConfig : TConfig;
   published
     procedure TestCreateConfig;
+    procedure TestCreateConfigArray;
   end;
 
 implementation
@@ -36,6 +37,7 @@ implementation
 
 procedure TConfigTest.TestCreateConfig;
 var
+  Option : TConfig.TOptionReader;
   IntValue : Integer;
   Int64Value : Int64;
   StringValue : String;
@@ -52,21 +54,69 @@ begin
     SetBoolean['option5'] := True;
   end;
 
-  IntValue := FConfig.Value['test.option1'].AsInteger;
-  AssertTrue('Config element ''test.option1'' is incorrect', IntValue =
-    456);
+  Option := FConfig.Value['test.option1'];
+  IntValue := Option.AsInteger;
+  AssertTrue('Config eleemnt ''test.option1'' has incorrect type',
+    Option.OptionType = TYPE_INTEGER);
+  AssertTrue('Config element ''test.option1'' has incorrect name',
+    Option.OptionName = 'option1');
+  AssertTrue('Config element ''test.option1'' is incorrect value',
+    IntValue = 456);
 
-  Int64Value := FConfig.Value['test.option2'].AsInt64;
-  AssertTrue('Config element ''test.option2'' is incorrect', Int64Value =
-    123456);
+  Option := FConfig.Value['test.option2'];
+  Int64Value := Option.AsInt64;
+  AssertTrue('Config eleemnt ''test.option2'' has incorrect type',
+    Option.OptionType = TYPE_INT64);
+  AssertTrue('Config element ''test.option2'' has incorrect name',
+    Option.OptionName = 'option2');
+  AssertTrue('Config element ''test.option2'' is incorrect value',
+    Int64Value = 123456);
 
-  StringValue := FConfig.Value['test.option4'].AsString;
-  AssertTrue('Config element ''test.option4'' is incorrect', StringValue =
-    'test value');
+  Option := FConfig.Value['test.option4'];
+  StringValue := Option.AsString;
+  AssertTrue('Config eleemnt ''test.option4'' has incorrect type',
+    Option.OptionType = TYPE_STRING);
+  AssertTrue('Config element ''test.option4'' has incorrect name',
+    Option.OptionName = 'option4');
+  AssertTrue('Config element ''test.option4'' is incorrect value',
+    StringValue = 'test value');
 
-  BooleanValue := FConfig.Value['test.option5'].AsBoolean;
-  AssertTrue('Config element ''test.option5'' is incorrect', BooleanValue =
-    True);
+  Option := FConfig.Value['test.option5'];
+  BooleanValue := Option.AsBoolean;
+  AssertTrue('Config eleemnt ''test.option5'' has incorrect type',
+    Option.OptionType = TYPE_BOOLEAN);
+  AssertTrue('Config element ''test.option5'' has incorrect name',
+    Option.OptionName = 'option5');
+  AssertTrue('Config element ''test.option5'' is incorrect value',
+    BooleanValue = True);
+
+  FreeAndNil(FConfig);
+end;
+
+procedure TConfigTest.TestCreateConfigArray;
+var
+  Option : TConfig.TOptionReader;
+  IntValue : Integer;
+  i : Integer;
+begin
+  FConfig := TConfig.Create;
+
+  with FConfig.CreateSection['test'].CreateArray['test_array'] do
+  begin
+    for i := 1 to 10 do
+      SetInteger[''] := i;
+  end;
+
+  i := 1;
+  for Option in FConfig.Value['test.test_array'].AsArray do
+  begin
+    IntValue := Option.AsInteger;
+    AssertTrue('Config ''array.test_array'' array element has incorrect type',
+      Option.OptionType = TYPE_INTEGER);
+    AssertTrue('Config ''array.test_array'' array element is incorrect value',
+      IntValue = i);
+    Inc(i);
+  end;
 
   FreeAndNil(FConfig);
 end;
