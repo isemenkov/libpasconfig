@@ -39,6 +39,12 @@ uses
 
 type
   {$IFDEF USE_EXCEPTIONS}
+  { Config file/string parse error }
+  EParseException = class (Exception);
+
+  { Can't read/write configuration file }
+  EIOException = class (Exception);
+
   { Option type cann't present by selected type }
   ETypeMismatchException = class (Exception);
 
@@ -276,12 +282,16 @@ type
       {$ENDIF}
   public
     constructor Create;
-    constructor Create (AFilename : string); { Create config and load data  }
-                                             { from file }
     destructor Destroy; override;
 
-    { Reload config data from file }
-    procedure Reload;
+    { Load config file from file and parse it }
+    procedure LoadFromFile (Filename : String);{$IFNDEF DEBUG}inline;{$ENDIF}
+
+    { Parse configuration from string }
+    procedure Parse (ConfigString : String);{$IFNDEF DEBUG}inline;{$ENDIF}
+
+    { Save current config to filename }
+    procedure SaveToFile (Filename : String);{$IFNDEF DEBUG}inline;{$ENDIF}
 
     { Try to read value path }
     property Value [Path : String] : TOptionReader read _GetValue;
@@ -293,6 +303,10 @@ type
     { Create new config array group section }
     property CreateArray [Name : String] : TOptionWriter read
       _CreateArray;
+
+    { Create new config list group section }
+    property CreateList [Name : String] : TOptionWriter read
+      _CreateList;
   end;
 
 implementation
@@ -577,17 +591,48 @@ begin
   FRootElement := config_root_setting(@FConfig);
 end;
 
-constructor TConfig.Create(AFilename: string);
-begin
-  config_init(@FConfig);
-  config_read_file(@FConfig, PChar(AFilename));
-  FRootElement := config_root_setting(@FConfig);
-end;
-
 destructor TConfig.Destroy;
 begin
   config_destroy(@FConfig);
   inherited Destroy;
+end;
+
+procedure TConfig.LoadFromFile(Filename : String);
+begin
+  config_init(@FConfig);
+  {$IFDEF USE_EXCEPTIONS}
+  if config_read_file(@FConfig, PChar(Filename)) <> CONFIG_TRUE then
+    raise EParseException.Create(Format('%s:%d - %s',
+      [config_error_file(@FConfig), config_error_line(@FConfig),
+      config_error_text(@FConfig)]));
+  {$ELSE}
+  config_read_file(@FConfig, PChar(Filename));
+  {$ENDIF}
+  FRootElement := config_root_setting(@FConfig);
+end;
+
+procedure TConfig.Parse(ConfigString: String);
+begin
+  config_init(@FConfig);
+  {$IFDEF USE_EXCEPTIONS}
+  if config_read_string(@FConfig, PChar(ConfigString)) <> CONFIG_TRUE then
+    raise EParseException.Create(Format('%s:%d - %s',
+      [config_error_file(@FConfig), config_error_line(@FConfig),
+      config_error_text(@FConfig)]));
+  {$ELSE}
+  config_read_string(@FConfig, PChar(ConfigString));
+  {$ENDIF}
+  FRootElement := config_root_setting(@FConfig);
+end;
+
+procedure TConfig.SaveToFile(Filename: String);
+begin
+  {$IFDEF USE_EXCEPTIONS}
+  if config_write_file(@FConfig, PChar(Filename)) <> CONFIG_TRUE then
+    raise EIOException.Create('Can''t write file: ' + Filename);
+  {$ELSE}
+  config_write_file(@FConfig, PChar(Filename));
+  {$ENDIF}
 end;
 
 function TConfig._GetValue(Path: String): TOptionReader;
@@ -608,11 +653,6 @@ end;
 function TConfig._CreateList(Name: String): TOptionWriter;
 begin
   Result := TOptionWriter.Create(FRootElement)._CreateList(Name);
-end;
-
-procedure TConfig.Reload;
-begin
-  // TODO
 end;
 
 end.

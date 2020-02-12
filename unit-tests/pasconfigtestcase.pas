@@ -35,7 +35,7 @@ type
 implementation
 
 { TConfigTest }
-
+{ Create config file, write and read parameters }
 procedure TConfigTest.TestCreateConfig;
 var
   Option : TConfig.TOptionReader;
@@ -94,6 +94,7 @@ begin
   FreeAndNil(FConfig);
 end;
 
+{ Create config, write/read array }
 procedure TConfigTest.TestCreateConfigArray;
 var
   Option : TConfig.TOptionReader;
@@ -122,6 +123,7 @@ begin
   FreeAndNil(FConfig);
 end;
 
+{ Create config, write/read list }
 procedure TConfigTest.TestCreateConfigList;
 var
   Option : TConfig.TOptionReader;
