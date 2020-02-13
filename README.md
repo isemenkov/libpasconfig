@@ -36,6 +36,7 @@ libPasConfig is object pascal wrapper around [libconfig library](https://github.
     config_setting_set_int64(setting, 1000000001);
 
     config_destroy(@config);
+  end;
 ```
 
 ### Object wrapper
@@ -68,5 +69,6 @@ libPasConfig is object pascal wrapper around [libconfig library](https://github.
     end;
 
     FreeAndNil(config);
+  end;
 ``` 
 
