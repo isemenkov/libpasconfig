@@ -30,6 +30,8 @@ type
     procedure TestCreateConfig;
     procedure TestCreateConfigArray;
     procedure TestCreateConfigList;
+    procedure TestCreateConfigFile;
+    procedure TestCreateConfigParse;
   end;
 
 implementation
@@ -158,6 +160,168 @@ begin
   end;
 
   FreeAndNil(FConfig);
+end;
+
+{ Write/read config file }
+procedure TConfigTest.TestCreateConfigFile;
+var
+  Option : TConfig.TOptionReader;
+  IntValue : Integer;
+  BoolValue : Boolean;
+  Int64Value : Int64;
+  StringValue : String;
+  i : Integer;
+begin
+  FConfig := TConfig.Create;
+
+  with FConfig.CreateSection['section1'] do
+  begin
+    SetInteger['integer_value'] := 94032;
+    SetBoolean['boolean_value'] := True;
+  end;
+
+  with FConfig.CreateSection['section2'].CreateArray['values'] do
+  begin
+    SetString[''] := 'abc';
+    SetString[''] := 'test';
+    SetString[''] := 'another string value';
+  end;
+
+  with FConfig.CreateSection['section3'].CreateList['list'] do
+  begin
+    SetInt64[''] := 10000000002;
+    SetInt64[''] := 10000000210;
+    SetString[''] := 'value';
+  end;
+
+  FConfig.SaveToFile('config.cfg');
+  FreeAndNil(FConfig);
+
+  AssertTrue('Config file not exists', FileExists('config.cfg'));
+
+  FConfig := TConfig.Create;
+  FConfig.LoadFromFile('config.cfg');
+
+  with FConfig.Value['section1'] do
+  begin
+    Option := Value['integer_value'];
+    IntValue := Option.AsInteger;
+
+    AssertTrue('Config element ''section1.integer_value'' has incorrect type',
+      Option.OptionType = TYPE_INTEGER);
+    AssertTrue('Config element ''section1.integer_value'' is incorrect value',
+      IntValue = 94032);
+
+    Option := Value['boolean_value'];
+    BoolValue := Option.AsBoolean;
+
+    AssertTrue('Config element ''section1.boolean_value'' has incorrect type',
+      Option.OptionType = TYPE_BOOLEAN);
+    AssertTrue('Config element ''section1.boolean_value'' is incorrect value',
+      BoolValue = True);
+  end;
+
+  with FConfig.Value['section2'] do
+  begin
+    i := 1;
+    for Option in Value['values'].AsArray do
+    begin
+      AssertTrue('Config element ''section2.values[' + IntToStr(i) + '] '' ' +
+        'has incorrect type', Option.OptionType = TYPE_STRING);
+
+      StringValue := Option.AsString;
+
+      case i of
+        1 :
+          AssertTrue('Config element ''section2.values[1]'' has incorrect type',
+            StringValue = 'abc');
+        2 :
+          AssertTrue('Config element ''section2.values[2]'' has incorrect type',
+            StringValue = 'test');
+        3 :
+          AssertTrue('Config element ''section2.values[3]'' has incorrect type',
+            StringValue = 'another string value');
+      end;
+
+      inc(i);
+    end;
+  end;
+
+  with FConfig.Value['section3'] do
+  begin
+    i := 1;
+    for Option in Value['list'].AsList do
+    begin
+      case i of
+        1 : begin
+          AssertTrue('Config element ''section3.list[1]'' has incorrect type',
+            Option.OptionType = TYPE_INT64);
+
+          Int64Value := Option.AsInt64;
+
+          AssertTrue('Config element ''section3.list[1]'' is incorrect value',
+            Int64Value = 10000000002);
+        end;
+        2 : begin
+          AssertTrue('Config element ''section3.list[2]'' has incorrect type',
+            Option.OptionType = TYPE_INT64);
+
+          Int64Value := Option.AsInt64;
+
+          AssertTrue('Config element ''section3.list[2]'' is incorrect value',
+            Int64Value = 10000000210);
+        end;
+        3 : begin
+          AssertTrue('Config element ''section3.list[3]'' has incorrect type',
+            Option.OptionType = TYPE_STRING);
+
+          StringValue := Option.AsString;
+
+          AssertTrue('Config element ''section3.list[3]'' is incorrect value',
+            StringValue = 'value');
+        end;
+      end;
+
+      Inc(i);
+    end;
+  end;
+
+  FreeAndNil(FConfig);
+  DeleteFile('config.cfg');
+end;
+
+{ Parse config from string and save to file }
+procedure TConfigTest.TestCreateConfigParse;
+var
+  Option : TConfig.TOptionReader;
+  IntValue : Integer;
+  BoolValue : Boolean;
+begin
+  FConfig := TConfig.Create;
+  FConfig.Parse('section1 : { integer_value = -12; boolean_value = false; };');
+
+  Option := FConfig.Value['section1.integer_value'];
+  AssertTrue('Config element ''section1.integer_value'' has incorrect type',
+    Option.OptionType = TYPE_INTEGER);
+
+  IntValue := Option.AsInteger;
+  AssertTrue('Config element ''section1.integer_value'' is incorrect value',
+    IntValue = -12);
+
+  Option := FConfig.Value['section1.boolean_value'];
+  AssertTrue('Config element ''section1.boolean_value'' has incorrect type',
+    Option.OptionType = TYPE_BOOLEAN);
+
+  BoolValue := Option.AsBoolean;
+  AssertTrue('Config element ''section1.boolean_value'' is incorrect value',
+    BoolValue = False);
+
+  FConfig.CreateSection['section2'].SetString['value'] := 'unknown';
+  FConfig.SaveToFile('config.cfg');
+  AssertTrue('Config file not exists', FileExists('config.cfg'));
+
+  FreeAndNil(FConfig);
+  DeleteFile('config.cfg');
 end;
 
 { TLibConfigTest }
