@@ -97,6 +97,9 @@ type
         constructor Create (AOption : pconfig_setting_t);
         destructor Destroy; override;
 
+        { Delete current config element }
+        procedure Delete;{$IFNDEF DEBUG}inline;{$ENDIF}
+
         { Create new config group section }
         property CreateSection [Name : String] : TOptionWriter read
           _CreateSection;
@@ -214,6 +217,9 @@ type
         constructor Create (AOption : pconfig_setting_t);
         destructor Destroy; override;
 
+        { Delete current config param }
+        procedure Delete; {$IFNDEF DEBUG}inline{$ENDIF}
+
         { Return option element parent }
         property OptionParent : TOptionReader read _GetParent;
 
@@ -321,6 +327,17 @@ end;
 destructor TConfig.TOptionWriter.Destroy;
 begin
   inherited Destroy;
+end;
+
+procedure TConfig.TOptionWriter.Delete;
+begin
+  {$IFDEF USE_EXCEPTIONS}
+  if config_setting_remove(FOption, config_setting_name(FOption)) <>
+    CONFIG_TRUE then
+    raise EValueNotExistsException.Create('Can''t remove element. Item not ' +
+      'exists.');
+  {$ENDIF}
+  config_setting_remove(FOption, config_setting_name(FOption));
 end;
 
 procedure TConfig.TOptionWriter._SetInteger(Name: String; Value: Integer);
@@ -443,6 +460,17 @@ end;
 destructor TConfig.TOptionReader.Destroy;
 begin
   inherited Destroy;
+end;
+
+procedure TConfig.TOptionReader.Delete;
+begin
+  {$IFDEF USE_EXCEPTIONS}
+  if config_setting_remove(FOption, config_setting_name(FOption)) <>
+    CONFIG_TRUE then
+    raise EValueNotExistsException.Create('Can''t remove element. Item not ' +
+      'exists.');
+  {$ENDIF}
+  config_setting_remove(FOption, config_setting_name(FOption));
 end;
 
 function TConfig.TOptionReader.AsArray: TArrayEnumerator;
