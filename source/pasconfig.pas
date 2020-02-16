@@ -174,15 +174,6 @@ type
       private
         FOption : pconfig_setting_t;
       private
-        { Get option element parent }
-        function _GetParent : TOptionReader;{$IFNDEF DEBUG}inline;{$ENDIF}
-
-        { Get option value type }
-        function _GetType : TOptionType;{$IFNDEF DEBUG}inline;{$ENDIF}
-
-        { Get option name }
-        function _GetName : String;{$IFNDEF DEBUG}inline;{$ENDIF}
-
         { Get option value by path }
         function _GetValue (Path : String) : TOptionReader;{$IFNDEF DEBUG}
           inline;{$ENDIF}
@@ -217,17 +208,29 @@ type
         constructor Create (AOption : pconfig_setting_t);
         destructor Destroy; override;
 
-        { Delete current config param }
-        procedure Delete; {$IFNDEF DEBUG}inline{$ENDIF}
+        { Return true if element is root }
+        function IsRoot : Boolean;{$IFNDEF DEBUG}inline;{$ENDIF}
+
+        { Reutrn true if element is section group }
+        function IsSection : Boolean;{$IFNDEF DEBUG}inline;{$ENDIF}
+
+        { Return true if element is array }
+        function IsArray : Boolean;{$IFNDEF DEBUG}inline;{$ENDIF}
+
+        { Return true if element is list }
+        function IsList : Boolean;{$IFNDEF DEBUG}inline;{$ENDIF}
 
         { Return option element parent }
-        property OptionParent : TOptionReader read _GetParent;
+        function OptionParent : TOptionReader;{$IFNDEF DEBUG}inline;{$ENDIF}
 
         { Return option value type }
-        property OptionType : TOptionType read _GetType;
+        function OptionType : TOptionType;{$IFNDEF DEBUG}inline;{$ENDIF}
 
         { Return option name }
-        property OptionName : String read _GetName;
+        function OptionName : String;{$IFNDEF DEBUG}inline;{$ENDIF}
+
+        { Delete current config param }
+        procedure Delete; {$IFNDEF DEBUG}inline{$ENDIF}
 
         { Return option value by path }
         property Value [Path : String] : TOptionReader read _GetValue;
@@ -464,6 +467,26 @@ begin
   inherited Destroy;
 end;
 
+function TConfig.TOptionReader.IsRoot: Boolean;
+begin
+  Result := (config_setting_is_root(FOption) = CONFIG_TRUE);
+end;
+
+function TConfig.TOptionReader.IsSection: Boolean;
+begin
+  Result := (config_setting_is_group(FOption) = CONFIG_TRUE);
+end;
+
+function TConfig.TOptionReader.IsArray: Boolean;
+begin
+  Result := (config_setting_is_array(FOption) = CONFIG_TRUE);
+end;
+
+function TConfig.TOptionReader.IsList: Boolean;
+begin
+  Result := (config_setting_is_list(FOption) = CONFIG_TRUE);
+end;
+
 procedure TConfig.TOptionReader.Delete;
 begin
   if config_setting_is_group(FOption) = CONFIG_TRUE then
@@ -508,17 +531,17 @@ begin
   Result := TListEnumerator.Create(FOption);
 end;
 
-function TConfig.TOptionReader._GetParent: TOptionReader;
+function TConfig.TOptionReader.OptionParent : TOptionReader;
 begin
   Result := TOptionReader.Create(config_setting_parent(FOption));
 end;
 
-function TConfig.TOptionReader._GetType: TOptionType;
+function TConfig.TOptionReader.OptionType : TOptionType;
 begin
   Result := TOptionType(config_setting_type(FOption) - 2);
 end;
 
-function TConfig.TOptionReader._GetName: String;
+function TConfig.TOptionReader.OptionName : String;
 begin
   Result := config_setting_name(FOption);
 end;
