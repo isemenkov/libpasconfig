@@ -337,7 +337,9 @@ begin
     raise EValueNotExistsException.Create('Can''t remove element. Item not ' +
       'exists.');
   {$ENDIF}
+  {$IFNDEF USE_EXCEPTIONS}
   config_setting_remove(FOption, config_setting_name(FOption));
+  {$ENDIF}
 end;
 
 procedure TConfig.TOptionWriter._SetInteger(Name: String; Value: Integer);
@@ -464,13 +466,28 @@ end;
 
 procedure TConfig.TOptionReader.Delete;
 begin
-  {$IFDEF USE_EXCEPTIONS}
-  if config_setting_remove(FOption, config_setting_name(FOption)) <>
-    CONFIG_TRUE then
-    raise EValueNotExistsException.Create('Can''t remove element. Item not ' +
-      'exists.');
-  {$ENDIF}
-  config_setting_remove(FOption, config_setting_name(FOption));
+  if config_setting_is_group(FOption) = CONFIG_TRUE then
+  begin
+    {$IFDEF USE_EXCEPTIONS}
+    if config_setting_remove(FOption, config_setting_name(FOption)) <>
+      CONFIG_TRUE then
+      raise EValueNotExistsException.Create('Can''t remove element. Item not ' +
+        'exists.');
+    {$ELSE}
+    config_setting_remove(FOption, config_setting_name(FOption));
+    {$ENDIF}
+  end else
+  begin
+    {$IFDEF USE_EXCEPTIONS}
+    if config_setting_remove_elem(config_setting_parent(FOption),
+      config_setting_index(FOption)) <> CONFIG_TRUE then
+      raise EValueNotExistsException.Create('Can''t remove element. Item not ' +
+        'exists.');
+    {$ELSE}
+    config_setting_remove_elem(config_setting_parent(FOption),
+      config_setting_index(FOption));
+    {$ENDIF}
+  end;
 end;
 
 function TConfig.TOptionReader.AsArray: TArrayEnumerator;

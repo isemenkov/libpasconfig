@@ -32,6 +32,7 @@ type
     procedure TestCreateConfigList;
     procedure TestCreateConfigFile;
     procedure TestCreateConfigParse;
+    procedure TestConfigDeleteParam;
   end;
 
 implementation
@@ -322,6 +323,68 @@ begin
 
   FreeAndNil(FConfig);
   DeleteFile('config.cfg');
+end;
+
+{ Delete config param }
+procedure TConfigTest.TestConfigDeleteParam;
+var
+  Option : TConfig.TOptionReader;
+  IntValue : Integer;
+begin
+  FConfig := TConfig.Create;
+
+  with FConfig.CreateSection['Section1'] do
+  begin
+    SetInteger['value1'] := 1;
+    SetInteger['value2'] := 2;
+    SetInteger['value3'] := 3;
+  end;
+
+  Option := FConfig.Value['Section1.value1'];
+  IntValue := Option.AsInteger;
+  AssertTrue('Config element ''Section1.value1'' has incorrect type',
+    Option.OptionType = TYPE_INTEGER);
+  AssertTrue('Config element ''Section1.value1'' is incorrect value',
+    IntValue = 1);
+
+  Option := FConfig.Value['Section1.value2'];
+  IntValue := Option.AsInteger;
+  AssertTrue('Config element ''Section1.value2'' has incorrect type',
+    Option.OptionType = TYPE_INTEGER);
+  AssertTrue('Config element ''Section1.value2'' is incorrect value',
+    IntValue = 2);
+
+  Option := FConfig.Value['Section1.value3'];
+  IntValue := Option.AsInteger;
+  AssertTrue('Config element ''Section1.value3'' has incorrect type',
+    Option.OptionType = TYPE_INTEGER);
+  AssertTrue('Config element ''Section1.value3'' is incorrect value',
+    IntValue = 3);
+
+  FConfig.Value['Section1.value3'].Delete;
+
+  Option := FConfig.Value['Section1.value1'];
+  IntValue := Option.AsInteger;
+  AssertTrue('Config element ''Section1.value1'' has incorrect type',
+    Option.OptionType = TYPE_INTEGER);
+  AssertTrue('Config element ''Section1.value1'' is incorrect value',
+    IntValue = 1);
+
+  Option := FConfig.Value['Section1.value2'];
+  IntValue := Option.AsInteger;
+  AssertTrue('Config element ''Section1.value2'' has incorrect type',
+    Option.OptionType = TYPE_INTEGER);
+  AssertTrue('Config element ''Section1.value2'' is incorrect value',
+    IntValue = 2);
+
+  try
+    Option := FConfig.Value['Section1.value3'];
+  except
+    Exit;
+  end;
+  Fail('Config element ''Section1.value3'' is not deleted');
+
+  FreeAndNil(FConfig);
 end;
 
 { TLibConfigTest }
