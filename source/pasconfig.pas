@@ -221,13 +221,25 @@ type
         function IsList : Boolean;{$IFNDEF DEBUG}inline;{$ENDIF}
 
         { Return option element parent }
-        function OptionParent : TOptionReader;{$IFNDEF DEBUG}inline;{$ENDIF}
+        function GetParent : TOptionReader;{$IFNDEF DEBUG}inline;{$ENDIF}
 
         { Return option value type }
-        function OptionType : TOptionType;{$IFNDEF DEBUG}inline;{$ENDIF}
+        function GetType : TOptionType;{$IFNDEF DEBUG}inline;{$ENDIF}
 
         { Return option name }
-        function OptionName : String;{$IFNDEF DEBUG}inline;{$ENDIF}
+        function GetName : String;{$IFNDEF DEBUG}inline;{$ENDIF}
+
+        { Return option source file name }
+        function GetSourceFile : String;{$IFNDEF DEBUG}inline;{$ENDIF}
+
+        { Return option source line }
+        function GetSourceLine : Cardinal;{$IFNDEF DEBUG}inline;{$ENDIF}
+
+        { Add custom pointer to option item }
+        procedure SetPointer (ptr : Pointer);{$IFNDEF DEBUG}inline;{$ENDIF}
+
+        { Return custom options pointer if exists }
+        function GetPointer : Pointer;{$IFNDEF DEBUG}inline;{$ENDIF}
 
         { Delete current config param }
         procedure Delete; {$IFNDEF DEBUG}inline{$ENDIF}
@@ -531,19 +543,39 @@ begin
   Result := TListEnumerator.Create(FOption);
 end;
 
-function TConfig.TOptionReader.OptionParent : TOptionReader;
+function TConfig.TOptionReader.GetParent : TOptionReader;
 begin
   Result := TOptionReader.Create(config_setting_parent(FOption));
 end;
 
-function TConfig.TOptionReader.OptionType : TOptionType;
+function TConfig.TOptionReader.GetType : TOptionType;
 begin
   Result := TOptionType(config_setting_type(FOption) - 2);
 end;
 
-function TConfig.TOptionReader.OptionName : String;
+function TConfig.TOptionReader.GetName : String;
 begin
   Result := config_setting_name(FOption);
+end;
+
+function TConfig.TOptionReader.GetSourceFile: String;
+begin
+  Result := config_setting_source_file(FOption);
+end;
+
+function TConfig.TOptionReader.GetSourceLine: Cardinal;
+begin
+  Result := config_setting_source_line(FOption);
+end;
+
+procedure TConfig.TOptionReader.SetPointer(ptr: Pointer);
+begin
+  config_setting_set_hook(FOption, ptr);
+end;
+
+function TConfig.TOptionReader.GetPointer: Pointer;
+begin
+  Result := config_setting_get_hook(FOption);
 end;
 
 function TConfig.TOptionReader._GetValue(Path: String): TOptionReader;
