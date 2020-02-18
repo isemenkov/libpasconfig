@@ -126,6 +126,12 @@ type
 
         { Add new string value to current group }
         property SetString  [Name : String] : String write _SetString;
+
+        { Add custom pointer to option item }
+        procedure SetPointer (ptr : Pointer);{$IFNDEF DEBUG}inline;{$ENDIF}
+
+        { Return custom options pointer if exists }
+        function GetPointer : Pointer;{$IFNDEF DEBUG}inline;{$ENDIF}
       end;
 
       { TOptionReader }
@@ -301,6 +307,13 @@ type
     { Create new list group section }
     function _CreateList (Name : String) : TOptionWriter;{$IFNDEF DEBUG}inline;
       {$ENDIF}
+
+    { Return include directory wich will be located for the configuration
+      config }
+    function GetIncludeDir : string;{$IFNDEF DEBUG}inline;{$ENDIF}
+
+    { Set include directory }
+    procedure SetIncludeDir (Path : String);{$IFNDEF DEBUG}inline;{$ENDIF}
   public
     constructor Create;
     destructor Destroy; override;
@@ -328,6 +341,9 @@ type
     { Create new config list group section }
     property CreateList [Name : String] : TOptionWriter read
       _CreateList;
+
+    { Current config include directory }
+    property IncludeDir : String read GetIncludeDir write SetIncludeDir;
   end;
 
 implementation
@@ -355,6 +371,16 @@ begin
   {$IFNDEF USE_EXCEPTIONS}
   config_setting_remove(FOption, config_setting_name(FOption));
   {$ENDIF}
+end;
+
+procedure TConfig.TOptionWriter.SetPointer(ptr: Pointer);
+begin
+  config_setting_set_hook(FOption, ptr);
+end;
+
+function TConfig.TOptionWriter.GetPointer: Pointer;
+begin
+  Result := config_setting_get_hook(FOption);
 end;
 
 procedure TConfig.TOptionWriter._SetInteger(Name: String; Value: Integer);
@@ -570,12 +596,12 @@ end;
 
 procedure TConfig.TOptionReader.SetPointer(ptr: Pointer);
 begin
-  config_setting_set_hook(FOption, ptr);
+  TOptionWriter.Create(FOption).SetPointer(ptr);
 end;
 
 function TConfig.TOptionReader.GetPointer: Pointer;
 begin
-  Result := config_setting_get_hook(FOption);
+  Result := TOptionWriter.Create(FOption).GetPointer;
 end;
 
 function TConfig.TOptionReader._GetValue(Path: String): TOptionReader;
@@ -722,6 +748,16 @@ end;
 function TConfig._CreateList(Name: String): TOptionWriter;
 begin
   Result := TOptionWriter.Create(FRootElement)._CreateList(Name);
+end;
+
+function TConfig.GetIncludeDir: string;
+begin
+  Result := config_get_include_dir(@FConfig);
+end;
+
+procedure TConfig.SetIncludeDir(Path: String);
+begin
+  config_set_include_dir(@FConfig, PChar(Path));
 end;
 
 end.
