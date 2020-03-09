@@ -1,5 +1,5 @@
 # libpasconfig
-libPasConfig is object pascal wrapper around [libconfig library](https://github.com/hyperrealm/libconfig).
+libPasConfig is object pascal wrapper around [libconfig library](https://github.com/hyperrealm/libconfig). libconfig is library for processing structured configuration files.
 
 ### Bindings
 
