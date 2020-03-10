@@ -3,6 +3,8 @@
 /unit-tests/libpasconfig_testproject.fpcunit.ini
 /unit-tests/libpasconfig_testproject.ico
 
+/binary/*
+
 # Delphi compiler-generated binaries (safe to delete)
 *.exe
 *.dll
