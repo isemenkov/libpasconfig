@@ -52,6 +52,20 @@ type
   EValueNotExistsException = class (Exception);
   {$ENDIF}
 
+  { TResult class generic }
+  generic TResult<ResultValue, ErrorValue> = class
+  private
+    FResult : ResultValue;
+    FError : ErrorValue;
+  public
+    constructor Create (Res : ResultValue; Err : ErrorValue);
+
+    function Ok : Boolean;{$IFNDEF DEBUG}inline;{$ENDIF}
+
+    property Result : ResultValue read FResult write FResult;
+    property Error : ErrorValue read FError write FError;
+  end;
+
   { TConfig }
   { Configuration file }
   TConfig = class
@@ -347,6 +361,19 @@ type
   end;
 
 implementation
+
+{ TResult }
+
+constructor TResult.Create(Res: ResultValue; Err: ErrorValue);
+begin
+  FResult := Res;
+  FError := Err;
+end;
+
+function TResult.Ok: Boolean;
+begin
+  Result := FError <> nil;
+end;
 
 { TConfig.TOptionWriter }
 

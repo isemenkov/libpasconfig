@@ -353,7 +353,7 @@ procedure config_set_float_precision (config : pconfig_t; digits : Word); cdecl;
     CONFIG_OPTION_FSYNC
         (Since v1.7.1) This option controls whether the config_write_file()
         function performs an fsync operation after writing the configuration and
-        before closing the file. By default this option is turned off. }
+        before closing the file. By default this option is turned off. }}
 function config_get_options (const config : pconfig_t) : Integer; cdecl;
   external libConfig;
 procedure config_set_options (config : pconfig_t; options : Integer); cdecl;
