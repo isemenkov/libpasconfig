@@ -71,11 +71,80 @@ type
   TConfig = class
   public
     type
+      TOptionWriter = class;
+
+      { TCollectionWriter }
+      TCollectionWriter = class
+      protected
+        FOption : pconfig_setting_t;
+      private
+        { Set option value as integer }
+        procedure _SetInteger (Value : Integer);{$IFNDEF DEBUG}inline;{$ENDIF}
+
+        { Set option value as int64 }
+        procedure _SetInt64 (Value : Int64);{$IFNDEF DEBUG}inline;{$ENDIF}
+
+        { Set option value as double }
+        procedure _SetFloat (Value : Double);{$IFNDEF DEBUG}inline;{$ENDIF}
+
+        { Set option value as boolean }
+        procedure _SetBoolean (Value : Boolean);{$IFNDEF DEBUG}inline;{$ENDIF}
+
+        { Set option value as string }
+        procedure _SetString (Value : String);{$IFNDEF DEBUG}inline;{$ENDIF}
+
+        { Create new option group section }
+        function _CreateSection (Name : String) : TOptionWriter;
+          {$IFNDEF DEBUG}inline;{$ENDIF}
+
+        { Create new array group section }
+        function _CreateArray (Name : String) : TCollectionWriter;
+          {$IFNDEF DEBUG}inline;{$ENDIF}
+
+        { Create new list group section }
+        function _CreateList (Name : String) : TCollectionWriter;
+          {$IFNDEF DEBUG}inline;{$ENDIF}
+      public
+        constructor Create (AOption : pconfig_setting_t);
+        destructor Destroy; override;
+
+        { Add new integer value to current collection }
+        property SetInteger : Integer write _SetInteger;
+
+        { Add new int64 value to current collection }
+        property SetInt64 : Int64 write _SetInt64;
+
+        { Add new double value to current collection }
+        property SetFloat : Double write _SetFloat;
+
+        { Add new boolean value to current collection }
+        property SetBoolean : Boolean write _SetBoolean;
+
+        { Add new string value to current collection }
+        property SetString : String write _SetString;
+
+        { Create new config group section }
+        property CreateSection [Name : String] : TOptionWriter read
+          _CreateSection;
+
+        { Create new config array group section }
+        property CreateArray [Name : String] : TCollectionWriter read
+          _CreateArray;
+
+        { Create new config list group section }
+        property CreateList [Name : String] : TCollectionWriter read
+          _CreateList;
+
+        { Add custom pointer to option item }
+        procedure SetPointer (ptr : Pointer);{$IFNDEF DEBUG}inline;{$ENDIF}
+
+        { Return custom options pointer if exists }
+        function GetPointer : Pointer;{$IFNDEF DEBUG}inline;{$ENDIF}
+      end;
+
       { TOptionWriter }
       { Writer for configuration option }
-      TOptionWriter = class
-      private
-        FOption : pconfig_setting_t;
+      TOptionWriter = class (TCollectionWriter)
       private
         { Set option value as integer }
         procedure _SetInteger (Name : String; Value : Integer);
@@ -96,35 +165,12 @@ type
         { Set option value as string }
         procedure _SetString (Name : String; Value : String);
           {$IFNDEF DEBUG}inline;{$ENDIF}
-
-        { Create new option group section }
-        function _CreateSection (Name : String) : TOptionWriter;{$IFNDEF DEBUG}
-          inline;{$ENDIF}
-
-        { Create new array group section }
-        function _CreateArray (Name : String) : TOptionWriter;
-          {$IFNDEF DEBUG}inline;{$ENDIF}
-
-        { Create new list group section }
-        function _CreateList (Name : String) : TOptionWriter;
       public
         constructor Create (AOption : pconfig_setting_t);
         destructor Destroy; override;
 
         { Delete current config element }
         procedure Delete;{$IFNDEF DEBUG}inline;{$ENDIF}
-
-        { Create new config group section }
-        property CreateSection [Name : String] : TOptionWriter read
-          _CreateSection;
-
-        { Create new config array group section }
-        property CreateArray [Name : String] : TOptionWriter read
-          _CreateArray;
-
-        { Create new config list group section }
-        property CreateList [Name : String] : TOptionWriter read
-          _CreateList;
 
         { Add new integer value to current group }
         property SetInteger [Name : String] : Integer write _SetInteger;
@@ -140,12 +186,6 @@ type
 
         { Add new string value to current group }
         property SetString  [Name : String] : String write _SetString;
-
-        { Add custom pointer to option item }
-        procedure SetPointer (ptr : Pointer);{$IFNDEF DEBUG}inline;{$ENDIF}
-
-        { Return custom options pointer if exists }
-        function GetPointer : Pointer;{$IFNDEF DEBUG}inline;{$ENDIF}
       end;
 
       { TOptionReader }
@@ -218,12 +258,12 @@ type
           inline;{$ENDIF}
 
         { Create new array group section }
-        function _CreateArray (Name : String) : TOptionWriter;{$IFNDEF DEBUG}
-          inline;{$ENDIF}
+        function _CreateArray (Name : String) : TCollectionWriter;
+          {$IFNDEF DEBUG}inline;{$ENDIF}
 
         { Create new list group section }
-        function _CreateList (Name : String) : TOptionWriter;{$IFNDEF DEBUG}
-          inline;{$ENDIF}
+        function _CreateList (Name : String) : TCollectionWriter;
+          {$IFNDEF DEBUG}inline;{$ENDIF}
       public
         constructor Create (AOption : pconfig_setting_t);
         destructor Destroy; override;
@@ -295,11 +335,11 @@ type
           _CreateSection;
 
         { Create new config array group section }
-        property CreateArray [Name : String] : TOptionWriter read
+        property CreateArray [Name : String] : TCollectionWriter read
           _CreateArray;
 
         { Create new config list group section }
-        property CreateList [Name : String] : TOptionWriter read
+        property CreateList [Name : String] : TCollectionWriter read
           _CreateList;
       end;
   private
@@ -315,12 +355,12 @@ type
       inline;{$ENDIF}
 
     { Create new array group section }
-    function _CreateArray (Name : String) : TOptionWriter;{$IFNDEF DEBUG}
+    function _CreateArray (Name : String) : TCollectionWriter;{$IFNDEF DEBUG}
       inline;{$ENDIF}
 
     { Create new list group section }
-    function _CreateList (Name : String) : TOptionWriter;{$IFNDEF DEBUG}inline;
-      {$ENDIF}
+    function _CreateList (Name : String) : TCollectionWriter;{$IFNDEF DEBUG}
+      inline;{$ENDIF}
 
     { Return include directory wich will be located for the configuration
       config }
@@ -349,11 +389,11 @@ type
       _CreateSection;
 
     { Create new config array group section }
-    property CreateArray [Name : String] : TOptionWriter read
+    property CreateArray [Name : String] : TCollectionWriter read
       _CreateArray;
 
     { Create new config list group section }
-    property CreateList [Name : String] : TOptionWriter read
+    property CreateList [Name : String] : TCollectionWriter read
       _CreateList;
 
     { Current config include directory }
@@ -361,6 +401,87 @@ type
   end;
 
 implementation
+
+{ TConfig.TCollectionWriter }
+
+procedure TConfig.TCollectionWriter._SetInteger(Value: Integer);
+var
+  setting : pconfig_setting_t;
+begin
+  setting := config_setting_add(FOption, PChar(''), CONFIG_TYPE_INT);
+  config_setting_set_int(setting, Value);
+end;
+
+procedure TConfig.TCollectionWriter._SetInt64(Value: Int64);
+var
+  setting : pconfig_setting_t;
+begin
+  setting := config_setting_add(FOption, PChar(''), CONFIG_TYPE_INT64);
+  config_setting_set_int64(setting, Value);
+end;
+
+procedure TConfig.TCollectionWriter._SetFloat(Value: Double);
+var
+  setting : pconfig_setting_t;
+begin
+  setting := config_setting_add(FOption, PChar(''), CONFIG_TYPE_FLOAT);
+  config_setting_set_float(setting, Value);
+end;
+
+procedure TConfig.TCollectionWriter._SetBoolean(Value: Boolean);
+var
+  setting : pconfig_setting_t;
+begin
+  setting := config_setting_add(FOption, PChar(''), CONFIG_TYPE_BOOL);
+  config_setting_set_bool(setting, Integer(Value));
+end;
+
+procedure TConfig.TCollectionWriter._SetString(Value: String);
+var
+  setting : pconfig_setting_t;
+begin
+  setting := config_setting_add(FOption, PChar(''), CONFIG_TYPE_STRING);
+  config_setting_set_string(setting, PChar(Value));
+end;
+
+function TConfig.TCollectionWriter._CreateSection(Name: String): TOptionWriter;
+begin
+  Result := TOptionWriter.Create(config_setting_add(FOption, PChar(Name),
+    CONFIG_TYPE_GROUP));
+end;
+
+function TConfig.TCollectionWriter._CreateArray(Name: String
+  ): TCollectionWriter;
+begin
+  Result := TCollectionWriter.Create(config_setting_add(FOption, PChar(Name),
+    CONFIG_TYPE_ARRAY));
+end;
+
+function TConfig.TCollectionWriter._CreateList(Name: String): TCollectionWriter;
+begin
+  Result := TCollectionWriter.Create(config_setting_add(FOption, PChar(Name),
+    CONFIG_TYPE_LIST));
+end;
+
+constructor TConfig.TCollectionWriter.Create(AOption: pconfig_setting_t);
+begin
+  FOption := AOption;
+end;
+
+destructor TConfig.TCollectionWriter.Destroy;
+begin
+  inherited Destroy;
+end;
+
+procedure TConfig.TCollectionWriter.SetPointer(ptr: Pointer);
+begin
+  config_setting_set_hook(FOption, ptr);
+end;
+
+function TConfig.TCollectionWriter.GetPointer: Pointer;
+begin
+  Result := config_setting_get_hook(FOption);
+end;
 
 { TResult }
 
@@ -398,16 +519,6 @@ begin
   {$IFNDEF USE_EXCEPTIONS}
   config_setting_remove(FOption, config_setting_name(FOption));
   {$ENDIF}
-end;
-
-procedure TConfig.TOptionWriter.SetPointer(ptr: Pointer);
-begin
-  config_setting_set_hook(FOption, ptr);
-end;
-
-function TConfig.TOptionWriter.GetPointer: Pointer;
-begin
-  Result := config_setting_get_hook(FOption);
 end;
 
 procedure TConfig.TOptionWriter._SetInteger(Name: String; Value: Integer);
@@ -448,24 +559,6 @@ var
 begin
   setting := config_setting_add(FOption, PChar(Name), CONFIG_TYPE_STRING);
   config_setting_set_string(setting, PChar(Value));
-end;
-
-function TConfig.TOptionWriter._CreateSection(Name: String): TOptionWriter;
-begin
-  Result := TOptionWriter.Create(config_setting_add(FOption, PChar(Name),
-    CONFIG_TYPE_GROUP));
-end;
-
-function TConfig.TOptionWriter._CreateArray(Name : String): TOptionWriter;
-begin
-  Result := TOptionWriter.Create(config_setting_add(FOption, PChar(Name),
-    CONFIG_TYPE_ARRAY));
-end;
-
-function TConfig.TOptionWriter._CreateList(Name: String): TOptionWriter;
-begin
-  Result := TOptionWriter.Create(config_setting_add(FOption, PChar(Name),
-    CONFIG_TYPE_LIST));
 end;
 
 { TConfig.TOptionReader.TArrayEnumerator }
@@ -695,12 +788,12 @@ begin
   Result := TOptionWriter.Create(FOption)._CreateSection(Name);
 end;
 
-function TConfig.TOptionReader._CreateArray(Name : String): TOptionWriter;
+function TConfig.TOptionReader._CreateArray(Name : String): TCollectionWriter;
 begin
   Result := TOptionWriter.Create(FOption)._CreateArray(Name);
 end;
 
-function TConfig.TOptionReader._CreateList(Name: String): TOptionWriter;
+function TConfig.TOptionReader._CreateList(Name: String): TCollectionWriter;
 begin
   Result := TOptionWriter.Create(FOption)._CreateList(Name);
 end;
@@ -767,12 +860,12 @@ begin
   Result := TOptionWriter.Create(FRootElement)._CreateSection(Name);
 end;
 
-function TConfig._CreateArray(Name : String): TOptionWriter;
+function TConfig._CreateArray(Name : String): TCollectionWriter;
 begin
   Result := TOptionWriter.Create(FRootElement)._CreateArray(Name);
 end;
 
-function TConfig._CreateList(Name: String): TOptionWriter;
+function TConfig._CreateList(Name: String): TCollectionWriter;
 begin
   Result := TOptionWriter.Create(FRootElement)._CreateList(Name);
 end;

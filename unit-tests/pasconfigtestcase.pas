@@ -109,7 +109,7 @@ begin
   with FConfig.CreateSection['test'].CreateArray['test_array'] do
   begin
     for i := 1 to 10 do
-      SetInteger[''] := i;
+      SetInteger := i;
   end;
 
   i := 1;
@@ -183,16 +183,16 @@ begin
 
   with FConfig.CreateSection['section2'].CreateArray['values'] do
   begin
-    SetString[''] := 'abc';
-    SetString[''] := 'test';
-    SetString[''] := 'another string value';
+    SetString := 'abc';
+    SetString := 'test';
+    SetString := 'another string value';
   end;
 
   with FConfig.CreateSection['section3'].CreateList['list'] do
   begin
-    SetInt64[''] := 10000000002;
-    SetInt64[''] := 10000000210;
-    SetString[''] := 'value';
+    SetInt64 := 10000000002;
+    SetInt64 := 10000000210;
+    SetString := 'value';
   end;
 
   FConfig.SaveToFile('config.cfg');
