@@ -64,8 +64,8 @@ libPasConfig is object pascal wrapper around [libconfig library](https://github.
 
     with config.CreateArray['config_array'] do
     begin
-      SetInt64[''] := 1000000000;
-      SetInt64[''] := 1000000001;
+      SetInt64 := 1000000000;
+      SetInt64 := 1000000001;
     end;
 
     FreeAndNil(config);
