@@ -35,41 +35,50 @@ unit pasconfig;
 interface
 
 uses
-  Classes, SysUtils, libpasconfig;
+  Classes, SysUtils, libpasconfig, fgl;
 
 type
-  {$IFDEF USE_EXCEPTIONS}
-  { Config file/string parse error }
-  EParseException = class (Exception);
-
-  { Can't read/write configuration file }
-  EIOException = class (Exception);
-
-  { Option type cann't present by selected type }
-  ETypeMismatchException = class (Exception);
-
-  { Option value not exists }
-  EValueNotExistsException = class (Exception);
-  {$ENDIF}
-
-  { TResult class generic }
-  generic TResult<ResultValue, ErrorValue> = class
-  private
-    FResult : ResultValue;
-    FError : ErrorValue;
-  public
-    constructor Create (Res : ResultValue; Err : ErrorValue);
-
-    function Ok : Boolean;{$IFNDEF DEBUG}inline;{$ENDIF}
-
-    property Result : ResultValue read FResult write FResult;
-    property Error : ErrorValue read FError write FError;
-  end;
-
   { TConfig }
   { Configuration file }
   TConfig = class
   public
+    type
+      TErrors = (
+        ERROR_NONE                                                    = 0,
+        ERROR_READ_FILE                                               = 1,
+        ERROR_READ_STRING                                             = 2,
+        ERROR_WRITE_FILE                                              = 3,
+        ERROR_DELETE                                                  = 4,
+        ERROR_DELETE_ELEM                                             = 5,
+        ERROR_CONVERT_ARRAY                                           = 6,
+        ERROR_CONVERT_LIST                                            = 7
+      );
+
+      { TErrorStack }
+      PErrorStack = ^TErrorStack;
+      TErrorStack = class
+      private
+        type
+          TErrorsList = specialize TFPGList<TErrors>;
+      private
+        FErrors : TErrorsList;
+      public
+        constructor Create;
+        destructor Destroy; override;
+
+        { Add error info stack }
+        procedure Push (Err : TErrors);{$IFNDEF DEBUG}inline;{$ENDIF}
+
+        { Get last error }
+        function Pop : TErrors;{$IFNDEF DEBUG}inline;{$ENDIF}
+
+        { Errors count }
+        function Count : Cardinal;{$IFNDEF DEBUG}inline;{$ENDIF}
+
+        { Clear all errors }
+        procedure Clear;{$IFNDEF DEBUG}inline;{$ENDIF}
+      end;
+
     type
       TOptionWriter = class;
 
@@ -77,6 +86,7 @@ type
       TCollectionWriter = class
       protected
         FOption : pconfig_setting_t;
+        FErrors : PErrorStack;
       private
         { Set option value as integer }
         procedure _SetInteger (Value : Integer);{$IFNDEF DEBUG}inline;{$ENDIF}
@@ -105,7 +115,7 @@ type
         function _CreateList (Name : String) : TCollectionWriter;
           {$IFNDEF DEBUG}inline;{$ENDIF}
       public
-        constructor Create (AOption : pconfig_setting_t);
+        constructor Create (AOption : pconfig_setting_t; Err : PErrorStack);
         destructor Destroy; override;
 
         { Add new integer value to current collection }
@@ -166,7 +176,7 @@ type
         procedure _SetString (Name : String; Value : String);
           {$IFNDEF DEBUG}inline;{$ENDIF}
       public
-        constructor Create (AOption : pconfig_setting_t);
+        constructor Create (AOption : pconfig_setting_t; Err : PErrorStack);
         destructor Destroy; override;
 
         { Delete current config element }
@@ -206,12 +216,13 @@ type
           { Array collection enumerator }
           TArrayEnumerator = class
           protected
+            FErrors : PErrorStack;
             FOption : pconfig_setting_t;
             FCount : Integer;
             FPosition : Cardinal;
             function GetCurrent : TOptionReader; inline;
           public
-            constructor Create (AOption : pconfig_setting_t);
+            constructor Create (AOption : pconfig_setting_t; Err : PErrorStack);
             function MoveNext : Boolean; inline;
             property Current : TOptionReader read GetCurrent;
             function GetEnumerator : TArrayEnumerator; inline;
@@ -221,18 +232,20 @@ type
           { List collection enumerator }
           TListEnumerator = class
           protected
+            FErrors : PErrorStack;
             FOption : pconfig_setting_t;
             FCount : Integer;
             FPosition : Cardinal;
             function GetCurrent : TOptionReader; inline;
           public
-            constructor Create (AOption : pconfig_setting_t);
+            constructor Create (AOption : pconfig_setting_t; Err : PErrorStack);
             function MoveNext : Boolean; inline;
             property Current : TOptionReader read GetCurrent;
             function GetEnumerator : TListEnumerator; inline;
           end;
       private
         FOption : pconfig_setting_t;
+        FErrors : PErrorStack;
       private
         { Get option value by path }
         function _GetValue (Path : String) : TOptionReader;{$IFNDEF DEBUG}
@@ -265,7 +278,7 @@ type
         function _CreateList (Name : String) : TCollectionWriter;
           {$IFNDEF DEBUG}inline;{$ENDIF}
       public
-        constructor Create (AOption : pconfig_setting_t);
+        constructor Create (AOption : pconfig_setting_t; Err : PErrorStack);
         destructor Destroy; override;
 
         { Return true if element is root }
@@ -345,6 +358,7 @@ type
   private
     FConfig : config_t;
     FRootElement : pconfig_setting_t;
+    FErrors : TErrorStack;
   private
     { Get option path }
     function _GetValue (Path : String) : TOptionReader;{$IFNDEF DEBUG}inline;
@@ -402,6 +416,43 @@ type
 
 implementation
 
+{ TConfig.TErrorStack }
+
+constructor TConfig.TErrorStack.Create;
+begin
+  FErrors := TErrorsList.Create;
+end;
+
+destructor TConfig.TErrorStack.Destroy;
+begin
+  FreeAndNil(FErrors);
+  inherited Destroy;
+end;
+
+procedure TConfig.TErrorStack.Push(Err: TErrors);
+begin
+  FErrors.Add(Err);
+end;
+
+function TConfig.TErrorStack.Pop: TErrors;
+begin
+  if Count > 0 then
+  begin
+    Result := FErrors.First;
+    FErrors.Delete(0);
+  end;
+end;
+
+function TConfig.TErrorStack.Count: Cardinal;
+begin
+  Result := FErrors.Count;
+end;
+
+procedure TConfig.TErrorStack.Clear;
+begin
+  FErrors.Clear;
+end;
+
 { TConfig.TCollectionWriter }
 
 procedure TConfig.TCollectionWriter._SetInteger(Value: Integer);
@@ -447,25 +498,27 @@ end;
 function TConfig.TCollectionWriter._CreateSection(Name: String): TOptionWriter;
 begin
   Result := TOptionWriter.Create(config_setting_add(FOption, PChar(Name),
-    CONFIG_TYPE_GROUP));
+    CONFIG_TYPE_GROUP), FErrors);
 end;
 
 function TConfig.TCollectionWriter._CreateArray(Name: String
   ): TCollectionWriter;
 begin
   Result := TCollectionWriter.Create(config_setting_add(FOption, PChar(Name),
-    CONFIG_TYPE_ARRAY));
+    CONFIG_TYPE_ARRAY), FErrors);
 end;
 
 function TConfig.TCollectionWriter._CreateList(Name: String): TCollectionWriter;
 begin
   Result := TCollectionWriter.Create(config_setting_add(FOption, PChar(Name),
-    CONFIG_TYPE_LIST));
+    CONFIG_TYPE_LIST), FErrors);
 end;
 
-constructor TConfig.TCollectionWriter.Create(AOption: pconfig_setting_t);
+constructor TConfig.TCollectionWriter.Create(AOption: pconfig_setting_t;
+  Err : PErrorStack);
 begin
   FOption := AOption;
+  FErrors := Err;
 end;
 
 destructor TConfig.TCollectionWriter.Destroy;
@@ -483,24 +536,12 @@ begin
   Result := config_setting_get_hook(FOption);
 end;
 
-{ TResult }
-
-constructor TResult.Create(Res: ResultValue; Err: ErrorValue);
-begin
-  FResult := Res;
-  FError := Err;
-end;
-
-function TResult.Ok: Boolean;
-begin
-  Result := FError <> nil;
-end;
-
 { TConfig.TOptionWriter }
 
-constructor TConfig.TOptionWriter.Create(AOption: pconfig_setting_t);
+constructor TConfig.TOptionWriter.Create(AOption: pconfig_setting_t;
+  Err : PErrorStack);
 begin
-  FOption := AOption;
+  inherited Create(AOption, Err);
 end;
 
 destructor TConfig.TOptionWriter.Destroy;
@@ -510,15 +551,7 @@ end;
 
 procedure TConfig.TOptionWriter.Delete;
 begin
-  {$IFDEF USE_EXCEPTIONS}
-  if config_setting_remove(FOption, config_setting_name(FOption)) <>
-    CONFIG_TRUE then
-    raise EValueNotExistsException.Create('Can''t remove element. Item not ' +
-      'exists.');
-  {$ENDIF}
-  {$IFNDEF USE_EXCEPTIONS}
   config_setting_remove(FOption, config_setting_name(FOption));
-  {$ENDIF}
 end;
 
 procedure TConfig.TOptionWriter._SetInteger(Name: String; Value: Integer);
@@ -564,8 +597,9 @@ end;
 { TConfig.TOptionReader.TArrayEnumerator }
 
 constructor TConfig.TOptionReader.TArrayEnumerator.Create(
-  AOption: pconfig_setting_t);
+  AOption: pconfig_setting_t; Err : PErrorStack);
 begin
+  FErrors := Err;
   FOption := AOption;
   FPosition := 0;
   FCount := config_setting_length(FOption);
@@ -573,7 +607,8 @@ end;
 
 function TConfig.TOptionReader.TArrayEnumerator.GetCurrent: TOptionReader;
 begin
-  Result := TOptionReader.Create(config_setting_get_elem(FOption, FPosition));
+  Result := TOptionReader.Create(config_setting_get_elem(FOption, FPosition),
+    FErrors);
   Inc(FPosition);
 end;
 
@@ -590,8 +625,9 @@ end;
 { TConfig.TOptionReader.TListEnumerator }
 
 constructor TConfig.TOptionReader.TListEnumerator.Create(
-  AOption: pconfig_setting_t);
+  AOption: pconfig_setting_t; Err : PErrorStack);
 begin
+  FErrors := Err;
   FOption := AOption;
   FPosition := 0;
   FCount := config_setting_length(FOption);
@@ -599,7 +635,8 @@ end;
 
 function TConfig.TOptionReader.TListEnumerator.GetCurrent: TOptionReader;
 begin
-  Result := TOptionReader.Create(config_setting_get_elem(FOption, FPosition));
+  Result := TOptionReader.Create(config_setting_get_elem(FOption, FPosition),
+    FErrors);
   Inc(FPosition);
 end;
 
@@ -615,9 +652,11 @@ end;
 
 { TConfig.TOptionReader }
 
-constructor TConfig.TOptionReader.Create(AOption: pconfig_setting_t);
+constructor TConfig.TOptionReader.Create(AOption: pconfig_setting_t;
+  Err : PErrorStack);
 begin
   FOption := AOption;
+  FErrors := Err;
 end;
 
 destructor TConfig.TOptionReader.Destroy;
@@ -647,51 +686,47 @@ end;
 
 procedure TConfig.TOptionReader.Delete;
 begin
-  if config_setting_is_group(FOption) = CONFIG_TRUE then
+  if IsSection then
   begin
-    {$IFDEF USE_EXCEPTIONS}
+
     if config_setting_remove(FOption, config_setting_name(FOption)) <>
       CONFIG_TRUE then
-      raise EValueNotExistsException.Create('Can''t remove element. Item not ' +
-        'exists.');
-    {$ELSE}
-    config_setting_remove(FOption, config_setting_name(FOption));
-    {$ENDIF}
+    begin
+      FErrors^.Push(ERROR_DELETE);
+      Exit;
+    end;
+
   end else
   begin
-    {$IFDEF USE_EXCEPTIONS}
+
     if config_setting_remove_elem(config_setting_parent(FOption),
       config_setting_index(FOption)) <> CONFIG_TRUE then
-      raise EValueNotExistsException.Create('Can''t remove element. Item not ' +
-        'exists.');
-    {$ELSE}
-    config_setting_remove_elem(config_setting_parent(FOption),
-      config_setting_index(FOption));
-    {$ENDIF}
+    begin
+      FErrors^.Push(ERROR_DELETE_ELEM);
+    end;
+
   end;
 end;
 
 function TConfig.TOptionReader.AsArray: TArrayEnumerator;
 begin
-  {$IFDEF USE_EXCEPTIONS}
-  if config_setting_type(FOption) <> CONFIG_TYPE_ARRAY then
-    raise ETypeMismatchException.Create('Option type can''t present as array');
-  {$ENDIF}
-  Result := TArrayEnumerator.Create(FOption);
+  if not IsArray then
+    FErrors^.Push(ERROR_CONVERT_ARRAY);
+
+  Result := TArrayEnumerator.Create(FOption, FErrors);
 end;
 
 function TConfig.TOptionReader.AsList: TListEnumerator;
 begin
-  {$IFDEF USE_EXCEPTIONS}
-  if config_setting_type(FOption) <> CONFIG_TYPE_LIST then
-    raise ETypeMismatchException.Create('Option type can''t present as list');
-  {$ENDIF}
-  Result := TListEnumerator.Create(FOption);
+  if not IsList then
+    FErrors^.Push(ERROR_CONVERT_LIST);
+
+  Result := TListEnumerator.Create(FOption, FErrors);
 end;
 
 function TConfig.TOptionReader.GetParent : TOptionReader;
 begin
-  Result := TOptionReader.Create(config_setting_parent(FOption));
+  Result := TOptionReader.Create(config_setting_parent(FOption), FErrors);
 end;
 
 function TConfig.TOptionReader.GetType : TOptionType;
@@ -716,92 +751,90 @@ end;
 
 procedure TConfig.TOptionReader.SetPointer(ptr: Pointer);
 begin
-  TOptionWriter.Create(FOption).SetPointer(ptr);
+  TOptionWriter.Create(FOption, FErrors).SetPointer(ptr);
 end;
 
 function TConfig.TOptionReader.GetPointer: Pointer;
 begin
-  Result := TOptionWriter.Create(FOption).GetPointer;
+  Result := TOptionWriter.Create(FOption, FErrors).GetPointer;
 end;
 
 function TConfig.TOptionReader._GetValue(Path: String): TOptionReader;
 begin
-  Result := TOptionReader.Create(config_setting_lookup(FOption, PChar(Path)));
-  {$IFDEF USE_EXCEPTIONS}
-  if Result.FOption = nil then
-    raise EValueNotExistsException.Create('Value ''' + Path + ''' not exists');
-  {$ENDIF}
+  Result := TOptionReader.Create(config_setting_lookup(FOption, PChar(Path)),
+    FErrors);
 end;
 
 function TConfig.TOptionReader._GetInteger: Integer;
 begin
-  {$IFDEF USE_EXCEPTIONS}
+  {
   if config_setting_type(FOption) <> CONFIG_TYPE_INT then
     raise ETypeMismatchException.Create('Option type cann''t present as '+
       'integer');
-  {$ENDIF}
+  }
   Result := config_setting_get_int(FOption);
 end;
 
 function TConfig.TOptionReader._GetInt64: Int64;
 begin
-  {$IFDEF USE_EXCEPTIONS}
+  {
   if config_setting_type(FOption) <> CONFIG_TYPE_INT64 then
     raise ETypeMismatchException.Create('Option type cann''t present as '+
       'int64');
-  {$ENDIF}
+  }
   Result := config_setting_get_int64(FOption);
 end;
 
 function TConfig.TOptionReader._GetFloat: Double;
 begin
-  {$IFDEF USE_EXCEPTIONS}
+  {
   if config_setting_type(FOption) <> CONFIG_TYPE_FLOAT then
     raise ETypeMismatchException.Create('Option type cann''t present as '+
       'double');
-  {$ENDIF}
+  }
   Result := config_setting_get_float(FOption);
 end;
 
 function TConfig.TOptionReader._GetBoolean: Boolean;
 begin
-  {$IFDEF USE_EXCEPTIONS}
+  {
   if config_setting_type(FOption) <> CONFIG_TYPE_BOOL then
     raise ETypeMismatchException.Create('Option type cann''t present as '+
       'boolean');
-  {$ENDIF}
+  }
   Result := Boolean(config_setting_get_bool(FOption));
 end;
 
 function TConfig.TOptionReader._GetString: String;
 begin
-  {$IFDEF USE_EXCEPTIONS}
+  {
   if config_setting_type(FOption) <> CONFIG_TYPE_STRING then
     raise ETypeMismatchException.Create('Option type cann''t present as '+
       'string');
-  {$ENDIF}
+  }
   Result := config_setting_get_string(FOption);
 end;
 
 function TConfig.TOptionReader._CreateSection(Name: String): TOptionWriter;
 begin
-  Result := TOptionWriter.Create(FOption)._CreateSection(Name);
+  Result := TOptionWriter.Create(FOption, FErrors)._CreateSection(Name);
 end;
 
 function TConfig.TOptionReader._CreateArray(Name : String): TCollectionWriter;
 begin
-  Result := TOptionWriter.Create(FOption)._CreateArray(Name);
+  Result := TOptionWriter.Create(FOption, FErrors)._CreateArray(Name);
 end;
 
 function TConfig.TOptionReader._CreateList(Name: String): TCollectionWriter;
 begin
-  Result := TOptionWriter.Create(FOption)._CreateList(Name);
+  Result := TOptionWriter.Create(FOption, FErrors)._CreateList(Name);
 end;
 
 { TConfig }
 
 constructor TConfig.Create;
 begin
+  FErrors := TErrorStack.Create;
   config_init(@FConfig);
   FRootElement := config_root_setting(@FConfig);
 end;
@@ -809,65 +842,60 @@ end;
 destructor TConfig.Destroy;
 begin
   config_destroy(@FConfig);
+  FreeAndNil(FErrors);
   inherited Destroy;
 end;
 
 procedure TConfig.LoadFromFile(Filename : String);
 begin
   config_init(@FConfig);
-  {$IFDEF USE_EXCEPTIONS}
+
   if config_read_file(@FConfig, PChar(Filename)) <> CONFIG_TRUE then
-    raise EParseException.Create(Format('%s:%d - %s',
-      [config_error_file(@FConfig), config_error_line(@FConfig),
-      config_error_text(@FConfig)]));
-  {$ELSE}
-  config_read_file(@FConfig, PChar(Filename));
-  {$ENDIF}
+  begin
+    FErrors.Push(ERROR_READ_FILE);
+    Exit;
+  end;
+
   FRootElement := config_root_setting(@FConfig);
 end;
 
 procedure TConfig.Parse(ConfigString: String);
 begin
   config_init(@FConfig);
-  {$IFDEF USE_EXCEPTIONS}
+
   if config_read_string(@FConfig, PChar(ConfigString)) <> CONFIG_TRUE then
-    raise EParseException.Create(Format('%s:%d - %s',
-      [config_error_file(@FConfig), config_error_line(@FConfig),
-      config_error_text(@FConfig)]));
-  {$ELSE}
-  config_read_string(@FConfig, PChar(ConfigString));
-  {$ENDIF}
+  begin
+    FErrors.Push(ERROR_READ_STRING);
+    Exit;
+  end;
+
   FRootElement := config_root_setting(@FConfig);
 end;
 
 procedure TConfig.SaveToFile(Filename: String);
 begin
-  {$IFDEF USE_EXCEPTIONS}
   if config_write_file(@FConfig, PChar(Filename)) <> CONFIG_TRUE then
-    raise EIOException.Create('Can''t write file: ' + Filename);
-  {$ELSE}
-  config_write_file(@FConfig, PChar(Filename));
-  {$ENDIF}
+    FErrors.Push(ERROR_WRITE_FILE);
 end;
 
 function TConfig._GetValue(Path: String): TOptionReader;
 begin
-  Result := TOptionReader.Create(FRootElement)._GetValue(Path);
+  Result := TOptionReader.Create(FRootElement, @FErrors)._GetValue(Path);
 end;
 
 function TConfig._CreateSection(Name: String): TOptionWriter;
 begin
-  Result := TOptionWriter.Create(FRootElement)._CreateSection(Name);
+  Result := TOptionWriter.Create(FRootElement, @FErrors)._CreateSection(Name);
 end;
 
 function TConfig._CreateArray(Name : String): TCollectionWriter;
 begin
-  Result := TOptionWriter.Create(FRootElement)._CreateArray(Name);
+  Result := TOptionWriter.Create(FRootElement, @FErrors)._CreateArray(Name);
 end;
 
 function TConfig._CreateList(Name: String): TCollectionWriter;
 begin
-  Result := TOptionWriter.Create(FRootElement)._CreateList(Name);
+  Result := TOptionWriter.Create(FRootElement, @FErrors)._CreateList(Name);
 end;
 
 function TConfig.GetIncludeDir: string;

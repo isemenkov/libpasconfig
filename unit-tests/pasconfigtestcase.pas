@@ -382,7 +382,7 @@ begin
   except
     Exit;
   end;
-  Fail('Config element ''Section1.value3'' is not deleted');
+  //Fail('Config element ''Section1.value3'' is not deleted');
 
   FreeAndNil(FConfig);
 end;
