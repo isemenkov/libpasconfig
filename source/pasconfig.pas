@@ -43,41 +43,44 @@ type
   TConfig = class
   public
     type
+      generic TResult<VALUE_TYPE, ERROR_TYPE> = class
+      protected
+        FValue : VALUE_TYPE;
+        FError : ERROR_TYPE;
+        FOk : Boolean;
+
+        function _Ok : Boolean;{$IFNDEF DEBUG}inline;{$ENDIF}
+      public
+        constructor Create (AValue : VALUE_TYPE; AError : ERROR_TYPE;
+          AOk : Boolean);
+        destructor Destroy; override;
+
+        property Ok : Boolean read _Ok;
+        property Value : VALUE_TYPE read FValue;
+        property Error : ERROR_TYPE read FError;
+      end;
+
       TErrors = (
         ERROR_NONE                                                    = 0,
         ERROR_READ_FILE                                               = 1,
         ERROR_READ_STRING                                             = 2,
         ERROR_WRITE_FILE                                              = 3,
-        ERROR_DELETE                                                  = 4,
-        ERROR_DELETE_ELEM                                             = 5,
-        ERROR_CONVERT_ARRAY                                           = 6,
-        ERROR_CONVERT_LIST                                            = 7
+        ERROR_NULL_NODE                                               = 4,
+
       );
 
-      { TErrorStack }
-      PErrorStack = ^TErrorStack;
-      TErrorStack = class
+      TVoidResult = class(specialize TResult<Pointer, TErrors>)
       private
-        type
-          TErrorsList = specialize TFPGList<TErrors>;
-      private
-        FErrors : TErrorsList;
+        property Value;
       public
-        constructor Create;
-        destructor Destroy; override;
-
-        { Add error info stack }
-        procedure Push (Err : TErrors);{$IFNDEF DEBUG}inline;{$ENDIF}
-
-        { Get last error }
-        function Pop : TErrors;{$IFNDEF DEBUG}inline;{$ENDIF}
-
-        { Errors count }
-        function Count : Cardinal;{$IFNDEF DEBUG}inline;{$ENDIF}
-
-        { Clear all errors }
-        procedure Clear;{$IFNDEF DEBUG}inline;{$ENDIF}
+        constructor Create(AError : TErrors; AOk : Boolean);
       end;
+
+      TBooleanResult = specialize TResult<Boolean, TErrors>;
+      TOptionTypeResult = class;
+      TStringResult = specialize TResult<String, TErrors>;
+      TCardinalResult = specialize TResult<Cardinal, TErrors>;
+      TPointerResult = specialize TResult<Pointer, TErrors>;
 
     type
       TOptionWriter = class;
@@ -86,7 +89,6 @@ type
       TCollectionWriter = class
       protected
         FOption : pconfig_setting_t;
-        FErrors : PErrorStack;
       private
         { Set option value as integer }
         procedure _SetInteger (Value : Integer);{$IFNDEF DEBUG}inline;{$ENDIF}
@@ -115,7 +117,7 @@ type
         function _CreateList (Name : String) : TCollectionWriter;
           {$IFNDEF DEBUG}inline;{$ENDIF}
       public
-        constructor Create (AOption : pconfig_setting_t; Err : PErrorStack);
+        constructor Create (AOption : pconfig_setting_t);
         destructor Destroy; override;
 
         { Add new integer value to current collection }
@@ -176,7 +178,7 @@ type
         procedure _SetString (Name : String; Value : String);
           {$IFNDEF DEBUG}inline;{$ENDIF}
       public
-        constructor Create (AOption : pconfig_setting_t; Err : PErrorStack);
+        constructor Create (AOption : pconfig_setting_t);
         destructor Destroy; override;
 
         { Delete current config element }
@@ -216,13 +218,12 @@ type
           { Array collection enumerator }
           TArrayEnumerator = class
           protected
-            FErrors : PErrorStack;
             FOption : pconfig_setting_t;
             FCount : Integer;
             FPosition : Cardinal;
             function GetCurrent : TOptionReader; inline;
           public
-            constructor Create (AOption : pconfig_setting_t; Err : PErrorStack);
+            constructor Create (AOption : pconfig_setting_t);
             function MoveNext : Boolean; inline;
             property Current : TOptionReader read GetCurrent;
             function GetEnumerator : TArrayEnumerator; inline;
@@ -232,20 +233,18 @@ type
           { List collection enumerator }
           TListEnumerator = class
           protected
-            FErrors : PErrorStack;
             FOption : pconfig_setting_t;
             FCount : Integer;
             FPosition : Cardinal;
             function GetCurrent : TOptionReader; inline;
           public
-            constructor Create (AOption : pconfig_setting_t; Err : PErrorStack);
+            constructor Create (AOption : pconfig_setting_t);
             function MoveNext : Boolean; inline;
             property Current : TOptionReader read GetCurrent;
             function GetEnumerator : TListEnumerator; inline;
           end;
       private
         FOption : pconfig_setting_t;
-        FErrors : PErrorStack;
       private
         { Get option value by path }
         function _GetValue (Path : String) : TOptionReader;{$IFNDEF DEBUG}
@@ -278,41 +277,41 @@ type
         function _CreateList (Name : String) : TCollectionWriter;
           {$IFNDEF DEBUG}inline;{$ENDIF}
       public
-        constructor Create (AOption : pconfig_setting_t; Err : PErrorStack);
+        constructor Create (AOption : pconfig_setting_t);
         destructor Destroy; override;
 
         { Return true if element is root }
-        function IsRoot : Boolean;{$IFNDEF DEBUG}inline;{$ENDIF}
+        function IsRoot : TBooleanResult;{$IFNDEF DEBUG}inline;{$ENDIF}
 
         { Reutrn true if element is section group }
-        function IsSection : Boolean;{$IFNDEF DEBUG}inline;{$ENDIF}
+        function IsSection : TBooleanResult;{$IFNDEF DEBUG}inline;{$ENDIF}
 
         { Return true if element is array }
-        function IsArray : Boolean;{$IFNDEF DEBUG}inline;{$ENDIF}
+        function IsArray : TBooleanResult;{$IFNDEF DEBUG}inline;{$ENDIF}
 
         { Return true if element is list }
-        function IsList : Boolean;{$IFNDEF DEBUG}inline;{$ENDIF}
+        function IsList : TBooleanResult;{$IFNDEF DEBUG}inline;{$ENDIF}
 
         { Return option element parent }
         function GetParent : TOptionReader;{$IFNDEF DEBUG}inline;{$ENDIF}
 
         { Return option value type }
-        function GetType : TOptionType;{$IFNDEF DEBUG}inline;{$ENDIF}
+        function GetType : TOptionTypeResult;{$IFNDEF DEBUG}inline;{$ENDIF}
 
         { Return option name }
-        function GetName : String;{$IFNDEF DEBUG}inline;{$ENDIF}
+        function GetName : TStringResult;{$IFNDEF DEBUG}inline;{$ENDIF}
 
         { Return option source file name }
-        function GetSourceFile : String;{$IFNDEF DEBUG}inline;{$ENDIF}
+        function GetSourceFile : TStringResult;{$IFNDEF DEBUG}inline;{$ENDIF}
 
         { Return option source line }
-        function GetSourceLine : Cardinal;{$IFNDEF DEBUG}inline;{$ENDIF}
+        function GetSourceLine : TCardinalResult;{$IFNDEF DEBUG}inline;{$ENDIF}
 
         { Add custom pointer to option item }
         procedure SetPointer (ptr : Pointer);{$IFNDEF DEBUG}inline;{$ENDIF}
 
         { Return custom options pointer if exists }
-        function GetPointer : Pointer;{$IFNDEF DEBUG}inline;{$ENDIF}
+        function GetPointer : TPointerResult;{$IFNDEF DEBUG}inline;{$ENDIF}
 
         { Delete current config param }
         procedure Delete; {$IFNDEF DEBUG}inline{$ENDIF}
@@ -355,10 +354,12 @@ type
         property CreateList [Name : String] : TCollectionWriter read
           _CreateList;
       end;
+
+      TOptionTypeResult = class(specialize TResult<TOptionReader.TOptionType,
+        TConfig.TErrors>);
   private
     FConfig : config_t;
     FRootElement : pconfig_setting_t;
-    FErrors : TErrorStack;
   private
     { Get option path }
     function _GetValue (Path : String) : TOptionReader;{$IFNDEF DEBUG}inline;
@@ -387,13 +388,16 @@ type
     destructor Destroy; override;
 
     { Load config file from file and parse it }
-    procedure LoadFromFile (Filename : String);{$IFNDEF DEBUG}inline;{$ENDIF}
+    function LoadFromFile (Filename : String) : TVoidResult;
+      {$IFNDEF DEBUG}inline;{$ENDIF}
 
     { Parse configuration from string }
-    procedure Parse (ConfigString : String);{$IFNDEF DEBUG}inline;{$ENDIF}
+    function Parse (ConfigString : String) : TVoidResult;
+      {$IFNDEF DEBUG}inline;{$ENDIF}
 
     { Save current config to filename }
-    procedure SaveToFile (Filename : String);{$IFNDEF DEBUG}inline;{$ENDIF}
+    function SaveToFile (Filename : String) : TVoidResult;
+      {$IFNDEF DEBUG}inline;{$ENDIF}
 
     { Try to read value path }
     property Value [Path : String] : TOptionReader read _GetValue;
@@ -416,41 +420,31 @@ type
 
 implementation
 
-{ TConfig.TErrorStack }
+{ TConfig.TResult }
 
-constructor TConfig.TErrorStack.Create;
+constructor TConfig.TResult.Create (AValue : VALUE_TYPE; AError : ERROR_TYPE;
+  AOk : Boolean);
 begin
-  FErrors := TErrorsList.Create;
+  FValue := AValue;
+  FError := AError;
+  FOk := AOk;
 end;
 
-destructor TConfig.TErrorStack.Destroy;
+destructor TConfig.TResult.Destroy;
 begin
-  FreeAndNil(FErrors);
   inherited Destroy;
 end;
 
-procedure TConfig.TErrorStack.Push(Err: TErrors);
+function TConfig.TResult._Ok : Boolean;
 begin
-  FErrors.Add(Err);
+  Result := FOk;
 end;
 
-function TConfig.TErrorStack.Pop: TErrors;
-begin
-  if Count > 0 then
-  begin
-    Result := FErrors.First;
-    FErrors.Delete(0);
-  end;
-end;
+{ TConfig.TVoidResult }
 
-function TConfig.TErrorStack.Count: Cardinal;
+constructor TConfig.TVoidResult.Create (AError : TErrors; AOk : Boolean);
 begin
-  Result := FErrors.Count;
-end;
-
-procedure TConfig.TErrorStack.Clear;
-begin
-  FErrors.Clear;
+  inherited Create(nil, AError, AOk);
 end;
 
 { TConfig.TCollectionWriter }
@@ -460,7 +454,8 @@ var
   setting : pconfig_setting_t;
 begin
   setting := config_setting_add(FOption, PChar(''), CONFIG_TYPE_INT);
-  config_setting_set_int(setting, Value);
+  if setting <> nil then
+    config_setting_set_int(setting, Value);
 end;
 
 procedure TConfig.TCollectionWriter._SetInt64(Value: Int64);
@@ -468,7 +463,8 @@ var
   setting : pconfig_setting_t;
 begin
   setting := config_setting_add(FOption, PChar(''), CONFIG_TYPE_INT64);
-  config_setting_set_int64(setting, Value);
+  if setting <> nil then
+    config_setting_set_int64(setting, Value);
 end;
 
 procedure TConfig.TCollectionWriter._SetFloat(Value: Double);
@@ -476,7 +472,8 @@ var
   setting : pconfig_setting_t;
 begin
   setting := config_setting_add(FOption, PChar(''), CONFIG_TYPE_FLOAT);
-  config_setting_set_float(setting, Value);
+  if setting <> nil then
+    config_setting_set_float(setting, Value);
 end;
 
 procedure TConfig.TCollectionWriter._SetBoolean(Value: Boolean);
@@ -484,7 +481,8 @@ var
   setting : pconfig_setting_t;
 begin
   setting := config_setting_add(FOption, PChar(''), CONFIG_TYPE_BOOL);
-  config_setting_set_bool(setting, Integer(Value));
+  if setting <> nil then
+    config_setting_set_bool(setting, Integer(Value));
 end;
 
 procedure TConfig.TCollectionWriter._SetString(Value: String);
@@ -492,33 +490,32 @@ var
   setting : pconfig_setting_t;
 begin
   setting := config_setting_add(FOption, PChar(''), CONFIG_TYPE_STRING);
-  config_setting_set_string(setting, PChar(Value));
+  if setting <> nil then
+    config_setting_set_string(setting, PChar(Value));
 end;
 
 function TConfig.TCollectionWriter._CreateSection(Name: String): TOptionWriter;
 begin
   Result := TOptionWriter.Create(config_setting_add(FOption, PChar(Name),
-    CONFIG_TYPE_GROUP), FErrors);
+    CONFIG_TYPE_GROUP));
 end;
 
 function TConfig.TCollectionWriter._CreateArray(Name: String
   ): TCollectionWriter;
 begin
   Result := TCollectionWriter.Create(config_setting_add(FOption, PChar(Name),
-    CONFIG_TYPE_ARRAY), FErrors);
+    CONFIG_TYPE_ARRAY));
 end;
 
 function TConfig.TCollectionWriter._CreateList(Name: String): TCollectionWriter;
 begin
   Result := TCollectionWriter.Create(config_setting_add(FOption, PChar(Name),
-    CONFIG_TYPE_LIST), FErrors);
+    CONFIG_TYPE_LIST));
 end;
 
-constructor TConfig.TCollectionWriter.Create(AOption: pconfig_setting_t;
-  Err : PErrorStack);
+constructor TConfig.TCollectionWriter.Create(AOption: pconfig_setting_t);
 begin
   FOption := AOption;
-  FErrors := Err;
 end;
 
 destructor TConfig.TCollectionWriter.Destroy;
@@ -538,10 +535,9 @@ end;
 
 { TConfig.TOptionWriter }
 
-constructor TConfig.TOptionWriter.Create(AOption: pconfig_setting_t;
-  Err : PErrorStack);
+constructor TConfig.TOptionWriter.Create(AOption: pconfig_setting_t);
 begin
-  inherited Create(AOption, Err);
+  inherited Create(AOption);
 end;
 
 destructor TConfig.TOptionWriter.Destroy;
@@ -597,9 +593,8 @@ end;
 { TConfig.TOptionReader.TArrayEnumerator }
 
 constructor TConfig.TOptionReader.TArrayEnumerator.Create(
-  AOption: pconfig_setting_t; Err : PErrorStack);
+  AOption: pconfig_setting_t);
 begin
-  FErrors := Err;
   FOption := AOption;
   FPosition := 0;
   FCount := config_setting_length(FOption);
@@ -607,8 +602,7 @@ end;
 
 function TConfig.TOptionReader.TArrayEnumerator.GetCurrent: TOptionReader;
 begin
-  Result := TOptionReader.Create(config_setting_get_elem(FOption, FPosition),
-    FErrors);
+  Result := TOptionReader.Create(config_setting_get_elem(FOption, FPosition));
   Inc(FPosition);
 end;
 
@@ -625,9 +619,8 @@ end;
 { TConfig.TOptionReader.TListEnumerator }
 
 constructor TConfig.TOptionReader.TListEnumerator.Create(
-  AOption: pconfig_setting_t; Err : PErrorStack);
+  AOption: pconfig_setting_t);
 begin
-  FErrors := Err;
   FOption := AOption;
   FPosition := 0;
   FCount := config_setting_length(FOption);
@@ -635,8 +628,7 @@ end;
 
 function TConfig.TOptionReader.TListEnumerator.GetCurrent: TOptionReader;
 begin
-  Result := TOptionReader.Create(config_setting_get_elem(FOption, FPosition),
-    FErrors);
+  Result := TOptionReader.Create(config_setting_get_elem(FOption, FPosition));
   Inc(FPosition);
 end;
 
@@ -652,11 +644,9 @@ end;
 
 { TConfig.TOptionReader }
 
-constructor TConfig.TOptionReader.Create(AOption: pconfig_setting_t;
-  Err : PErrorStack);
+constructor TConfig.TOptionReader.Create(AOption: pconfig_setting_t);
 begin
   FOption := AOption;
-  FErrors := Err;
 end;
 
 destructor TConfig.TOptionReader.Destroy;
@@ -664,35 +654,62 @@ begin
   inherited Destroy;
 end;
 
-function TConfig.TOptionReader.IsRoot: Boolean;
+function TConfig.TOptionReader.IsRoot: TBooleanResult;
 begin
-  Result := (config_setting_is_root(FOption) = CONFIG_TRUE);
+  if FOption = nil then
+  begin
+    Result := TBooleanResult.Create(False, ERROR_NULL_NODE, False);
+    Exit;
+  end;
+
+  Result := TBooleanResult.Create(config_setting_is_root(FOption) = CONFIG_TRUE,
+    ERROR_NONE, True);
 end;
 
-function TConfig.TOptionReader.IsSection: Boolean;
+function TConfig.TOptionReader.IsSection: TBooleanResult;
 begin
-  Result := (config_setting_is_group(FOption) = CONFIG_TRUE);
+  if FOption = nil then
+  begin
+    Result := TBooleanResult.Create(False, ERROR_NULL_NODE, False);
+    Exit;
+  end;
+
+  Result := TBooleanResult.Create(config_setting_is_group(FOption) =
+    CONFIG_TRUE, ERROR_NONE, True);
 end;
 
-function TConfig.TOptionReader.IsArray: Boolean;
+function TConfig.TOptionReader.IsArray: TBooleanResult;
 begin
-  Result := (config_setting_is_array(FOption) = CONFIG_TRUE);
+  if FOption = nil then
+  begin
+    Result := TBooleanResult.Create(False, ERROR_NULL_NODE, False);
+    Exit;
+  end;
+
+  Result := TBooleanResult.Create(config_setting_is_array(FOption) =
+    CONFIG_TRUE, ERROR_NONE, True);
 end;
 
-function TConfig.TOptionReader.IsList: Boolean;
+function TConfig.TOptionReader.IsList: TBooleanResult;
 begin
-  Result := (config_setting_is_list(FOption) = CONFIG_TRUE);
+  if FOption = nil then
+  begin
+    Result := TBooleanResult.Create(False, ERROR_NULL_NODE, False);
+    Exit;
+  end;
+
+  Result := TBooleanResult.Create(config_setting_is_list(FOption) = CONFIG_TRUE,
+    ERROR_NONE, True);
 end;
 
 procedure TConfig.TOptionReader.Delete;
 begin
-  if IsSection then
+  if IsSection.Ok and IsSection.Value then
   begin
 
     if config_setting_remove(FOption, config_setting_name(FOption)) <>
       CONFIG_TRUE then
     begin
-      FErrors^.Push(ERROR_DELETE);
       Exit;
     end;
 
@@ -702,7 +719,7 @@ begin
     if config_setting_remove_elem(config_setting_parent(FOption),
       config_setting_index(FOption)) <> CONFIG_TRUE then
     begin
-      FErrors^.Push(ERROR_DELETE_ELEM);
+
     end;
 
   end;
@@ -710,59 +727,93 @@ end;
 
 function TConfig.TOptionReader.AsArray: TArrayEnumerator;
 begin
-  if not IsArray then
-    FErrors^.Push(ERROR_CONVERT_ARRAY);
+  //if IsArray.Ok and (not IsArray.Value) then
+  //  FErrors^.Push(ERROR_CONVERT_ARRAY);
 
-  Result := TArrayEnumerator.Create(FOption, FErrors);
+  Result := TArrayEnumerator.Create(FOption);
 end;
 
 function TConfig.TOptionReader.AsList: TListEnumerator;
 begin
-  if not IsList then
-    FErrors^.Push(ERROR_CONVERT_LIST);
+  //if IsList.Ok and (not IsList.Value) then
+  //  FErrors^.Push(ERROR_CONVERT_LIST);
 
-  Result := TListEnumerator.Create(FOption, FErrors);
+  Result := TListEnumerator.Create(FOption);
 end;
 
 function TConfig.TOptionReader.GetParent : TOptionReader;
 begin
-  Result := TOptionReader.Create(config_setting_parent(FOption), FErrors);
+  Result := TOptionReader.Create(config_setting_parent(FOption));
 end;
 
-function TConfig.TOptionReader.GetType : TOptionType;
+function TConfig.TOptionReader.GetType : TOptionTypeResult;
 begin
-  Result := TOptionType(config_setting_type(FOption) - 2);
+  if FOption = nil then
+  begin
+    Result := TOptionTypeResult.Create(TYPE_INTEGER, ERROR_NULL_NODE, False);
+    Exit;
+  end;
+
+  Result := TOptionTypeResult.Create(TOptionType(config_setting_type(FOption) -
+    2), ERROR_NONE, True);
 end;
 
-function TConfig.TOptionReader.GetName : String;
+function TConfig.TOptionReader.GetName : TStringResult;
 begin
-  Result := config_setting_name(FOption);
+  if FOption = nil then
+  begin
+    Result := TStringResult.Create('', ERROR_NULL_NODE, False);
+    Exit;
+  end;
+
+  Result := TStringResult.Create(config_setting_name(FOption), ERROR_NONE,
+    True);
 end;
 
-function TConfig.TOptionReader.GetSourceFile: String;
+function TConfig.TOptionReader.GetSourceFile: TStringResult;
 begin
-  Result := config_setting_source_file(FOption);
+  if FOption = nil then
+  begin
+    Result := TStringResult.Create('', ERROR_NULL_NODE, False);
+    Exit;
+  end;
+
+  Result := TStringResult.Create(config_setting_source_file(FOption),
+    ERROR_NONE, True);
 end;
 
-function TConfig.TOptionReader.GetSourceLine: Cardinal;
+function TConfig.TOptionReader.GetSourceLine: TCardinalResult;
 begin
-  Result := config_setting_source_line(FOption);
+  if FOption = nil then
+  begin
+    Result := TCardinalResult.Create(0, ERROR_NULL_NODE, False);
+    Exit;
+  end;
+
+  Result := TCardinalResult.Create(config_setting_source_line(FOption),
+    ERROR_NONE, True);
 end;
 
 procedure TConfig.TOptionReader.SetPointer(ptr: Pointer);
 begin
-  TOptionWriter.Create(FOption, FErrors).SetPointer(ptr);
+  TOptionWriter.Create(FOption).SetPointer(ptr);
 end;
 
-function TConfig.TOptionReader.GetPointer: Pointer;
+function TConfig.TOptionReader.GetPointer: TPointerResult;
 begin
-  Result := TOptionWriter.Create(FOption, FErrors).GetPointer;
+  if FOption = nil then
+  begin
+    Result := TPointerResult.Create(nil, ERROR_NULL_NODE, False);
+    Exit;
+  end;
+
+  Result := TPointerResult.Create(TOptionWriter.Create(FOption).GetPointer,
+    ERROR_NONE, True);
 end;
 
 function TConfig.TOptionReader._GetValue(Path: String): TOptionReader;
 begin
-  Result := TOptionReader.Create(config_setting_lookup(FOption, PChar(Path)),
-    FErrors);
+  Result := TOptionReader.Create(config_setting_lookup(FOption, PChar(Path)));
 end;
 
 function TConfig.TOptionReader._GetInteger: Integer;
@@ -817,24 +868,23 @@ end;
 
 function TConfig.TOptionReader._CreateSection(Name: String): TOptionWriter;
 begin
-  Result := TOptionWriter.Create(FOption, FErrors)._CreateSection(Name);
+  Result := TOptionWriter.Create(FOption)._CreateSection(Name);
 end;
 
 function TConfig.TOptionReader._CreateArray(Name : String): TCollectionWriter;
 begin
-  Result := TOptionWriter.Create(FOption, FErrors)._CreateArray(Name);
+  Result := TOptionWriter.Create(FOption)._CreateArray(Name);
 end;
 
 function TConfig.TOptionReader._CreateList(Name: String): TCollectionWriter;
 begin
-  Result := TOptionWriter.Create(FOption, FErrors)._CreateList(Name);
+  Result := TOptionWriter.Create(FOption)._CreateList(Name);
 end;
 
 { TConfig }
 
 constructor TConfig.Create;
 begin
-  FErrors := TErrorStack.Create;
   config_init(@FConfig);
   FRootElement := config_root_setting(@FConfig);
 end;
@@ -842,60 +892,65 @@ end;
 destructor TConfig.Destroy;
 begin
   config_destroy(@FConfig);
-  FreeAndNil(FErrors);
   inherited Destroy;
 end;
 
-procedure TConfig.LoadFromFile(Filename : String);
+function TConfig.LoadFromFile(Filename : String) : TVoidResult;
 begin
   config_init(@FConfig);
 
   if config_read_file(@FConfig, PChar(Filename)) <> CONFIG_TRUE then
   begin
-    FErrors.Push(ERROR_READ_FILE);
+    Result := TVoidResult.Create(ERROR_READ_FILE, False);
     Exit;
   end;
 
+  Result := TVoidResult.Create(ERROR_NONE, True);
   FRootElement := config_root_setting(@FConfig);
 end;
 
-procedure TConfig.Parse(ConfigString: String);
+function TConfig.Parse(ConfigString: String) : TVoidResult;
 begin
   config_init(@FConfig);
 
   if config_read_string(@FConfig, PChar(ConfigString)) <> CONFIG_TRUE then
   begin
-    FErrors.Push(ERROR_READ_STRING);
+    Result := TVoidResult.Create(ERROR_READ_STRING, False);
     Exit;
   end;
 
+  Result := TVoidResult.Create(ERROR_NONE, True);
   FRootElement := config_root_setting(@FConfig);
 end;
 
-procedure TConfig.SaveToFile(Filename: String);
+function TConfig.SaveToFile(Filename: String) : TVoidResult;
 begin
   if config_write_file(@FConfig, PChar(Filename)) <> CONFIG_TRUE then
-    FErrors.Push(ERROR_WRITE_FILE);
+  begin
+    Result := TVoidResult.Create(ERROR_WRITE_FILE, False);
+    Exit;
+  end;
+  Result := TVoidResult.Create(ERROR_NONE, True);
 end;
 
 function TConfig._GetValue(Path: String): TOptionReader;
 begin
-  Result := TOptionReader.Create(FRootElement, @FErrors)._GetValue(Path);
+  Result := TOptionReader.Create(FRootElement)._GetValue(Path);
 end;
 
 function TConfig._CreateSection(Name: String): TOptionWriter;
 begin
-  Result := TOptionWriter.Create(FRootElement, @FErrors)._CreateSection(Name);
+  Result := TOptionWriter.Create(FRootElement)._CreateSection(Name);
 end;
 
 function TConfig._CreateArray(Name : String): TCollectionWriter;
 begin
-  Result := TOptionWriter.Create(FRootElement, @FErrors)._CreateArray(Name);
+  Result := TOptionWriter.Create(FRootElement)._CreateArray(Name);
 end;
 
 function TConfig._CreateList(Name: String): TCollectionWriter;
 begin
-  Result := TOptionWriter.Create(FRootElement, @FErrors)._CreateList(Name);
+  Result := TOptionWriter.Create(FRootElement)._CreateList(Name);
 end;
 
 function TConfig.GetIncludeDir: string;
