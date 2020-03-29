@@ -43,12 +43,14 @@ type
   TConfig = class
   public
     type
+      { Structure which contains result value or error type like GO lang }
       generic TResult<VALUE_TYPE, ERROR_TYPE> = class
       protected
         FValue : VALUE_TYPE;
         FError : ERROR_TYPE;
         FOk : Boolean;
 
+        { Is error }
         function _Ok : Boolean;{$IFNDEF DEBUG}inline;{$ENDIF}
       public
         constructor Create (AValue : VALUE_TYPE; AError : ERROR_TYPE;
@@ -66,7 +68,7 @@ type
         ERROR_READ_STRING                                             = 2,
         ERROR_WRITE_FILE                                              = 3,
         ERROR_NULL_NODE                                               = 4,
-
+        ERROR_DELETE                                                  = 5
       );
 
       TVoidResult = class(specialize TResult<Pointer, TErrors>)
@@ -81,7 +83,9 @@ type
       TStringResult = specialize TResult<String, TErrors>;
       TCardinalResult = specialize TResult<Cardinal, TErrors>;
       TPointerResult = specialize TResult<Pointer, TErrors>;
-
+      TIntegerResult = specialize TResult<Integer, TErrors>;
+      TInt64Result = specialize TResult<Int64, TErrors>;
+      TDoubleResult = specialize TResult<Double, TErrors>;
     type
       TOptionWriter = class;
 
@@ -182,7 +186,7 @@ type
         destructor Destroy; override;
 
         { Delete current config element }
-        procedure Delete;{$IFNDEF DEBUG}inline;{$ENDIF}
+        function Delete : TVoidResult;{$IFNDEF DEBUG}inline;{$ENDIF}
 
         { Add new integer value to current group }
         property SetInteger [Name : String] : Integer write _SetInteger;
@@ -251,19 +255,19 @@ type
           inline;{$ENDIF}
 
         { Get option value as integer }
-        function _GetInteger : Integer;{$IFNDEF DEBUG}inline;{$ENDIF}
+        function _GetInteger : TIntegerResult;{$IFNDEF DEBUG}inline;{$ENDIF}
 
         { Get option value as int64 }
-        function _GetInt64 : Int64;{$IFNDEF DEBUG}inline;{$ENDIF}
+        function _GetInt64 : TInt64Result;{$IFNDEF DEBUG}inline;{$ENDIF}
 
         { Get option value as double }
-        function _GetFloat : Double;{$IFNDEF DEBUG}inline;{$ENDIF}
+        function _GetFloat : TDoubleResult;{$IFNDEF DEBUG}inline;{$ENDIF}
 
         { Get option value as boolean }
-        function _GetBoolean : Boolean;{$IFNDEF DEBUG}inline;{$ENDIF}
+        function _GetBoolean : TBooleanResult;{$IFNDEF DEBUG}inline;{$ENDIF}
 
         { Get option value as string }
-        function _GetString : String;{$IFNDEF DEBUG}inline;{$ENDIF}
+        function _GetString : TStringResult;{$IFNDEF DEBUG}inline;{$ENDIF}
 
         { Create new option group section }
         function _CreateSection (Name : String) : TOptionWriter;{$IFNDEF DEBUG}
@@ -314,26 +318,26 @@ type
         function GetPointer : TPointerResult;{$IFNDEF DEBUG}inline;{$ENDIF}
 
         { Delete current config param }
-        procedure Delete; {$IFNDEF DEBUG}inline{$ENDIF}
+        function Delete : TVoidResult; {$IFNDEF DEBUG}inline{$ENDIF}
 
         { Return option value by path }
         property Value [Path : String] : TOptionReader read _GetValue;
 
         { Read option data value }
         { Present option value as integer type }
-        property AsInteger : Integer read _GetInteger;
+        property AsInteger : TIntegerResult read _GetInteger;
 
         { Present option value as int64 type }
-        property AsInt64 : Int64 read _GetInt64;
+        property AsInt64 : TInt64Result read _GetInt64;
 
         { Present option value as double type }
-        property AsFloat : Double read _GetFloat;
+        property AsFloat : TDoubleResult read _GetFloat;
 
         { Present option value as boolean type }
-        property AsBoolean : Boolean read _GetBoolean;
+        property AsBoolean : TBooleanResult read _GetBoolean;
 
         { Present option value as string type }
-        property AsString : String read _GetString;
+        property AsString : TStringResult read _GetString;
 
         { Return array group enumerator }
         function AsArray : TArrayEnumerator;{$IFNDEF DEBUG}inline;{$ENDIF}
@@ -453,6 +457,9 @@ procedure TConfig.TCollectionWriter._SetInteger(Value: Integer);
 var
   setting : pconfig_setting_t;
 begin
+  if FOption = nil then
+    Exit;
+
   setting := config_setting_add(FOption, PChar(''), CONFIG_TYPE_INT);
   if setting <> nil then
     config_setting_set_int(setting, Value);
@@ -462,6 +469,9 @@ procedure TConfig.TCollectionWriter._SetInt64(Value: Int64);
 var
   setting : pconfig_setting_t;
 begin
+  if FOption = nil then
+    Exit;
+
   setting := config_setting_add(FOption, PChar(''), CONFIG_TYPE_INT64);
   if setting <> nil then
     config_setting_set_int64(setting, Value);
@@ -471,6 +481,9 @@ procedure TConfig.TCollectionWriter._SetFloat(Value: Double);
 var
   setting : pconfig_setting_t;
 begin
+  if FOption = nil then
+    Exit;
+
   setting := config_setting_add(FOption, PChar(''), CONFIG_TYPE_FLOAT);
   if setting <> nil then
     config_setting_set_float(setting, Value);
@@ -480,6 +493,9 @@ procedure TConfig.TCollectionWriter._SetBoolean(Value: Boolean);
 var
   setting : pconfig_setting_t;
 begin
+  if FOption = nil then
+    Exit;
+
   setting := config_setting_add(FOption, PChar(''), CONFIG_TYPE_BOOL);
   if setting <> nil then
     config_setting_set_bool(setting, Integer(Value));
@@ -489,28 +505,55 @@ procedure TConfig.TCollectionWriter._SetString(Value: String);
 var
   setting : pconfig_setting_t;
 begin
+  if FOption = nil then
+    Exit;
+
   setting := config_setting_add(FOption, PChar(''), CONFIG_TYPE_STRING);
   if setting <> nil then
     config_setting_set_string(setting, PChar(Value));
 end;
 
 function TConfig.TCollectionWriter._CreateSection(Name: String): TOptionWriter;
+var
+  setting : pconfig_setting_t;
 begin
-  Result := TOptionWriter.Create(config_setting_add(FOption, PChar(Name),
-    CONFIG_TYPE_GROUP));
+  if FOption = nil then
+  begin
+    Result := TOptionWriter.Create(FOption);
+    Exit;
+  end;
+
+  setting := config_setting_add(FOption, PChar(Name), CONFIG_TYPE_GROUP);
+  Result := TOptionWriter.Create(setting);
 end;
 
-function TConfig.TCollectionWriter._CreateArray(Name: String
-  ): TCollectionWriter;
+function TConfig.TCollectionWriter._CreateArray(Name: String) :
+  TCollectionWriter;
+var
+  setting : pconfig_setting_t;
 begin
-  Result := TCollectionWriter.Create(config_setting_add(FOption, PChar(Name),
-    CONFIG_TYPE_ARRAY));
+  if FOption = nil then
+  begin
+    Result := TCollectionWriter.Create(FOption);
+    Exit;
+  end;
+
+  setting := config_setting_add(FOption, PChar(Name), CONFIG_TYPE_ARRAY);
+  Result := TCollectionWriter.Create(setting);
 end;
 
 function TConfig.TCollectionWriter._CreateList(Name: String): TCollectionWriter;
+var
+  setting : pconfig_setting_t;
 begin
-  Result := TCollectionWriter.Create(config_setting_add(FOption, PChar(Name),
-    CONFIG_TYPE_LIST));
+  if FOption = nil then
+  begin
+    Result := TCollectionWriter.Create(FOption);
+    Exit;
+  end;
+
+  setting := config_setting_add(FOption, PChar(Name), CONFIG_TYPE_LIST);
+  Result := TCollectionWriter.Create(setting);
 end;
 
 constructor TConfig.TCollectionWriter.Create(AOption: pconfig_setting_t);
@@ -545,49 +588,82 @@ begin
   inherited Destroy;
 end;
 
-procedure TConfig.TOptionWriter.Delete;
+function TConfig.TOptionWriter.Delete : TVoidResult;
 begin
-  config_setting_remove(FOption, config_setting_name(FOption));
+  if (FOption <> nil) and (config_setting_is_group(FOption) = CONFIG_TRUE) then
+  begin
+    Result := TVoidResult.Create(ERROR_DELETE, config_setting_remove(FOption,
+      config_setting_name(FOption)) <> CONFIG_TRUE);
+    Exit;
+  end else
+  begin
+    Result := TVoidResult.Create(ERROR_DELETE,
+      config_setting_remove_elem(config_setting_parent(FOption),
+      config_setting_index(FOption)) <> CONFIG_TRUE);
+    Exit;
+  end;
+
+  Result := TVoidResult.Create(ERROR_NULL_NODE, False);
 end;
 
 procedure TConfig.TOptionWriter._SetInteger(Name: String; Value: Integer);
 var
   setting : pconfig_setting_t;
 begin
+  if FOption = nil then
+    Exit;
+
   setting := config_setting_add(FOption, PChar(Name), CONFIG_TYPE_INT);
-  config_setting_set_int(setting, Value);
+  if setting <> nil then
+    config_setting_set_int(setting, Value);
 end;
 
 procedure TConfig.TOptionWriter._SetInt64(Name: String; Value: Int64);
 var
   setting : pconfig_setting_t;
 begin
+  if FOption = nil then
+    Exit;
+
   setting := config_setting_add(FOption, PChar(Name), CONFIG_TYPE_INT64);
-  config_setting_set_int64(setting, Value);
+  if setting <> nil then
+    config_setting_set_int64(setting, Value);
 end;
 
 procedure TConfig.TOptionWriter._SetFloat(Name: String; Value: Double);
 var
   setting : pconfig_setting_t;
 begin
+  if FOption = nil then
+    Exit;
+
   setting := config_setting_add(FOption, PChar(Name), CONFIG_TYPE_FLOAT);
-  config_setting_set_float(setting, Value);
+  if setting <> nil then
+    config_setting_set_float(setting, Value);
 end;
 
 procedure TConfig.TOptionWriter._SetBoolean(Name: String; Value: Boolean);
 var
   setting : pconfig_setting_t;
 begin
+  if FOption = nil then
+    Exit;
+
   setting := config_setting_add(FOption, PChar(Name), CONFIG_TYPE_BOOL);
-  config_setting_set_bool(setting, Integer(Value));
+  if setting <> nil then
+    config_setting_set_bool(setting, Integer(Value));
 end;
 
 procedure TConfig.TOptionWriter._SetString(Name: String; Value: String);
 var
   setting : pconfig_setting_t;
 begin
+  if FOption = nil then
+    Exit;
+
   setting := config_setting_add(FOption, PChar(Name), CONFIG_TYPE_STRING);
-  config_setting_set_string(setting, PChar(Value));
+  if setting <> nil then
+    config_setting_set_string(setting, PChar(Value));
 end;
 
 { TConfig.TOptionReader.TArrayEnumerator }
@@ -597,11 +673,20 @@ constructor TConfig.TOptionReader.TArrayEnumerator.Create(
 begin
   FOption := AOption;
   FPosition := 0;
-  FCount := config_setting_length(FOption);
+  if FOption = nil then
+    FCount := 0
+  else
+    FCount := config_setting_length(FOption);
 end;
 
 function TConfig.TOptionReader.TArrayEnumerator.GetCurrent: TOptionReader;
 begin
+  if FOption = nil then
+  begin
+    Result := TOptionReader.Create(FOption);
+    Exit;
+  end;
+
   Result := TOptionReader.Create(config_setting_get_elem(FOption, FPosition));
   Inc(FPosition);
 end;
@@ -623,11 +708,20 @@ constructor TConfig.TOptionReader.TListEnumerator.Create(
 begin
   FOption := AOption;
   FPosition := 0;
-  FCount := config_setting_length(FOption);
+  if FOption = nil then
+    FCount := 0
+  else
+    FCount := config_setting_length(FOption);
 end;
 
 function TConfig.TOptionReader.TListEnumerator.GetCurrent: TOptionReader;
 begin
+  if FOption = nil then
+  begin
+    Result := TOptionReader.Create(FOption);
+    Exit;
+  end;
+
   Result := TOptionReader.Create(config_setting_get_elem(FOption, FPosition));
   Inc(FPosition);
 end;
@@ -702,42 +796,18 @@ begin
     ERROR_NONE, True);
 end;
 
-procedure TConfig.TOptionReader.Delete;
+function TConfig.TOptionReader.Delete : TVoidResult;
 begin
-  if IsSection.Ok and IsSection.Value then
-  begin
-
-    if config_setting_remove(FOption, config_setting_name(FOption)) <>
-      CONFIG_TRUE then
-    begin
-      Exit;
-    end;
-
-  end else
-  begin
-
-    if config_setting_remove_elem(config_setting_parent(FOption),
-      config_setting_index(FOption)) <> CONFIG_TRUE then
-    begin
-
-    end;
-
-  end;
+  Result := TOptionWriter.Create(FOption).Delete;
 end;
 
 function TConfig.TOptionReader.AsArray: TArrayEnumerator;
 begin
-  //if IsArray.Ok and (not IsArray.Value) then
-  //  FErrors^.Push(ERROR_CONVERT_ARRAY);
-
   Result := TArrayEnumerator.Create(FOption);
 end;
 
 function TConfig.TOptionReader.AsList: TListEnumerator;
 begin
-  //if IsList.Ok and (not IsList.Value) then
-  //  FErrors^.Push(ERROR_CONVERT_LIST);
-
   Result := TListEnumerator.Create(FOption);
 end;
 
@@ -754,8 +824,8 @@ begin
     Exit;
   end;
 
-  Result := TOptionTypeResult.Create(TOptionType(config_setting_type(FOption) -
-    2), ERROR_NONE, True);
+  Result := TOptionTypeResult.Create(
+    TOptionType(config_setting_type(FOption) - 2), ERROR_NONE, True);
 end;
 
 function TConfig.TOptionReader.GetName : TStringResult;
@@ -816,54 +886,64 @@ begin
   Result := TOptionReader.Create(config_setting_lookup(FOption, PChar(Path)));
 end;
 
-function TConfig.TOptionReader._GetInteger: Integer;
+function TConfig.TOptionReader._GetInteger: TIntegerResult;
 begin
-  {
-  if config_setting_type(FOption) <> CONFIG_TYPE_INT then
-    raise ETypeMismatchException.Create('Option type cann''t present as '+
-      'integer');
-  }
-  Result := config_setting_get_int(FOption);
+  if FOption = nil then
+  begin
+    Result := TIntegerResult.Create(0, ERROR_NULL_NODE, False);
+    Exit;
+  end;
+
+  Result := TIntegerResult.Create(config_setting_get_int(FOption), ERROR_NONE,
+    True);
 end;
 
-function TConfig.TOptionReader._GetInt64: Int64;
+function TConfig.TOptionReader._GetInt64: TInt64Result;
 begin
-  {
-  if config_setting_type(FOption) <> CONFIG_TYPE_INT64 then
-    raise ETypeMismatchException.Create('Option type cann''t present as '+
-      'int64');
-  }
-  Result := config_setting_get_int64(FOption);
+  if FOption = nil then
+  begin
+    Result := TInt64Result.Create(0, ERROR_NULL_NODE, False);
+    Exit;
+  end;
+
+  Result := TInt64Result.Create(config_setting_get_int64(FOption), ERROR_NONE,
+    True);
 end;
 
-function TConfig.TOptionReader._GetFloat: Double;
+function TConfig.TOptionReader._GetFloat: TDoubleResult;
 begin
-  {
-  if config_setting_type(FOption) <> CONFIG_TYPE_FLOAT then
-    raise ETypeMismatchException.Create('Option type cann''t present as '+
-      'double');
-  }
-  Result := config_setting_get_float(FOption);
+  if FOption = nil then
+  begin
+    Result := TDoubleResult.Create(0.0, ERROR_NULL_NODE, False);
+    Exit;
+  end;
+
+  Result := TDoubleResult.Create(config_setting_get_float(FOption), ERROR_NONE,
+    True);
 end;
 
-function TConfig.TOptionReader._GetBoolean: Boolean;
+function TConfig.TOptionReader._GetBoolean: TBooleanResult;
 begin
-  {
-  if config_setting_type(FOption) <> CONFIG_TYPE_BOOL then
-    raise ETypeMismatchException.Create('Option type cann''t present as '+
-      'boolean');
-  }
-  Result := Boolean(config_setting_get_bool(FOption));
+  if FOption = nil then
+  begin
+    Result := TBooleanResult.Create(False, ERROR_NULL_NODE, False);
+    Exit;
+  end;
+
+  Result := TBooleanResult.Create(Boolean(config_setting_get_bool(FOption)),
+    ERROR_NONE, True);
 end;
 
-function TConfig.TOptionReader._GetString: String;
+function TConfig.TOptionReader._GetString: TStringResult;
 begin
-  {
-  if config_setting_type(FOption) <> CONFIG_TYPE_STRING then
-    raise ETypeMismatchException.Create('Option type cann''t present as '+
-      'string');
-  }
-  Result := config_setting_get_string(FOption);
+  if FOption = nil then
+  begin
+    Result := TStringResult.Create('', ERROR_NULL_NODE, False);
+    Exit;
+  end;
+
+  Result := TStringResult.Create(config_setting_get_string(FOption), ERROR_NONE,
+    True);
 end;
 
 function TConfig.TOptionReader._CreateSection(Name: String): TOptionWriter;

@@ -59,8 +59,9 @@ begin
   end;
 
   Option := FConfig.Value['test.option1'];
-  IntValue := Option.AsInteger;
-  AssertTrue('Config eleemnt ''test.option1'' has incorrect type',
+  AssertTrue('Config element ''test.option1'' error', Option.AsInteger.Ok);
+  IntValue := Option.AsInteger.Value;
+  AssertTrue('Config element ''test.option1'' has incorrect type',
     Option.GetType.Ok and (Option.GetType.Value = TYPE_INTEGER));
   AssertTrue('Config element ''test.option1'' has incorrect name',
     Option.GetName.Ok and (Option.GetName.Value = 'option1'));
@@ -68,8 +69,9 @@ begin
     IntValue = 456);
 
   Option := FConfig.Value['test.option2'];
-  Int64Value := Option.AsInt64;
-  AssertTrue('Config eleemnt ''test.option2'' has incorrect type',
+  AssertTrue('Config element ''test.option2'' error', Option.AsInt64.Ok);
+  Int64Value := Option.AsInt64.Value;
+  AssertTrue('Config element ''test.option2'' has incorrect type',
     Option.GetType.Ok and (Option.GetType.Value = TYPE_INT64));
   AssertTrue('Config element ''test.option2'' has incorrect name',
     Option.GetName.Ok and (Option.GetName.Value = 'option2'));
@@ -77,8 +79,9 @@ begin
     Int64Value = 123456);
 
   Option := FConfig.Value['test.option4'];
-  StringValue := Option.AsString;
-  AssertTrue('Config eleemnt ''test.option4'' has incorrect type',
+  AssertTrue('Config element ''test.option4'' error', Option.AsString.Ok);
+  StringValue := Option.AsString.Value;
+  AssertTrue('Config element ''test.option4'' has incorrect type',
     Option.GetType.Ok and (Option.GetType.Value = TYPE_STRING));
   AssertTrue('Config element ''test.option4'' has incorrect name',
     Option.GetName.Ok and (Option.GetName.Value = 'option4'));
@@ -86,8 +89,9 @@ begin
     StringValue = 'test value');
 
   Option := FConfig.Value['test.option5'];
-  BooleanValue := Option.AsBoolean;
-  AssertTrue('Config eleemnt ''test.option5'' has incorrect type',
+  AssertTrue('Config element ''test.option5'' error', Option.AsBoolean.Ok);
+  BooleanValue := Option.AsBoolean.Value;
+  AssertTrue('Config element ''test.option5'' has incorrect type',
     Option.GetType.Ok and (Option.GetType.Value = TYPE_BOOLEAN));
   AssertTrue('Config element ''test.option5'' has incorrect name',
     Option.GetName.Ok and (Option.GetName.Value = 'option5'));
@@ -115,7 +119,9 @@ begin
   i := 1;
   for Option in FConfig.Value['test.test_array'].AsArray do
   begin
-    IntValue := Option.AsInteger;
+    AssertTrue('Config ''array.test_array'' array element error',
+      Option.AsInteger.Ok);
+    IntValue := Option.AsInteger.Value;
     AssertTrue('Config ''array.test_array'' array element has incorrect type',
       Option.GetType.Ok and (Option.GetType.Value = TYPE_INTEGER));
     AssertTrue('Config ''array.test_array'' array element is incorrect value',
@@ -151,10 +157,14 @@ begin
   i := 1;
   for Option in FConfig.Value['test.test_list'].AsList do
   begin
-    StringValue := Option.Value['string_value'].AsString;
+    AssertTrue('Config element ''option' + IntToStr(i) + '.string_value'' '+
+      'error', Option.Value['string_value'].AsString.Ok);
+    StringValue := Option.Value['string_value'].AsString.Value;
     AssertTrue('Config element ''option' + IntToStr(i) + '.string_value'' ' +
       'is incorrect value', StringValue = 'Value' + IntToStr(i));
-    IntValue := Option.Value['integer_value'].AsInteger;
+    AssertTrue('Config element ''option' + IntToStr(i) + '.integer_value'' ' +
+      'error', Option.Value['integer_value'].AsInteger.Ok);
+    IntValue := Option.Value['integer_value'].AsInteger.Value;
     AssertTrue('Config element ''option' + IntToStr(i) + '.integer_value'' ' +
       'is incorrect value', IntValue = i + 8);
     Inc(i);
@@ -208,7 +218,9 @@ begin
   with FConfig.Value['section1'] do
   begin
     Option := Value['integer_value'];
-    IntValue := Option.AsInteger;
+    AssertTrue('Config element ''section1.integer_value'' error',
+      Option.AsInteger.Ok);
+    IntValue := Option.AsInteger.Value;
 
     AssertTrue('Config element ''section1.integer_value'' has incorrect type',
       Option.GetType.Ok and (Option.GetType.Value = TYPE_INTEGER));
@@ -216,7 +228,9 @@ begin
       IntValue = 94032);
 
     Option := Value['boolean_value'];
-    BoolValue := Option.AsBoolean;
+    AssertTrue('Config element ''section1.boolean_value'' error',
+      Option.AsBoolean.Ok);
+    BoolValue := Option.AsBoolean.Value;
 
     AssertTrue('Config element ''section1.boolean_value'' has incorrect type',
       Option.GetType.Ok and (Option.GetType.Value = TYPE_BOOLEAN));
@@ -233,7 +247,7 @@ begin
         'has incorrect type', Option.GetType.Ok and (Option.GetType.Value =
         TYPE_STRING));
 
-      StringValue := Option.AsString;
+      StringValue := Option.AsString.Value;
 
       case i of
         1 :
@@ -260,8 +274,10 @@ begin
         1 : begin
           AssertTrue('Config element ''section3.list[1]'' has incorrect type',
             Option.GetType.Ok and (Option.GetType.Value = TYPE_INT64));
+          AssertTrue('Config element ''section3.list[1]'' error',
+            Option.AsInt64.Ok);
 
-          Int64Value := Option.AsInt64;
+          Int64Value := Option.AsInt64.Value;
 
           AssertTrue('Config element ''section3.list[1]'' is incorrect value',
             Int64Value = 10000000002);
@@ -269,8 +285,10 @@ begin
         2 : begin
           AssertTrue('Config element ''section3.list[2]'' has incorrect type',
             Option.GetType.Ok and (Option.GetType.Value = TYPE_INT64));
+          AssertTrue('Config element ''section3.list[2]'' error',
+            Option.AsInt64.Ok);
 
-          Int64Value := Option.AsInt64;
+          Int64Value := Option.AsInt64.Value;
 
           AssertTrue('Config element ''section3.list[2]'' is incorrect value',
             Int64Value = 10000000210);
@@ -278,8 +296,10 @@ begin
         3 : begin
           AssertTrue('Config element ''section3.list[3]'' has incorrect type',
             Option.GetType.Ok and (Option.GetType.Value = TYPE_STRING));
+          AssertTrue('Config element ''section3.list[3]'' error',
+            Option.AsString.Ok);
 
-          StringValue := Option.AsString;
+          StringValue := Option.AsString.Value;
 
           AssertTrue('Config element ''section3.list[3]'' is incorrect value',
             StringValue = 'value');
@@ -311,7 +331,9 @@ begin
   AssertTrue('Config element ''section1.integer_value'' has incorrect type',
     Option.GetType.Ok and (Option.GetType.Value = TYPE_INTEGER));
 
-  IntValue := Option.AsInteger;
+  AssertTrue('Config element ''section1.integer_value'' error',
+    Option.AsInteger.Ok);
+  IntValue := Option.AsInteger.Value;
   AssertTrue('Config element ''section1.integer_value'' is incorrect value',
     IntValue = -12);
 
@@ -319,7 +341,9 @@ begin
   AssertTrue('Config element ''section1.boolean_value'' has incorrect type',
     Option.GetType.Ok and (Option.GetType.Value = TYPE_BOOLEAN));
 
-  BoolValue := Option.AsBoolean;
+  AssertTrue('Config element ''section1.boolean_value'' error',
+    Option.AsBoolean.Ok);
+  BoolValue := Option.AsBoolean.Value;
   AssertTrue('Config element ''section1.boolean_value'' is incorrect value',
     BoolValue = False);
 
@@ -348,21 +372,24 @@ begin
   end;
 
   Option := FConfig.Value['Section1.value1'];
-  IntValue := Option.AsInteger;
+  AssertTrue('Config element ''Section1.value1'' error', Option.AsInteger.Ok);
+  IntValue := Option.AsInteger.Value;
   AssertTrue('Config element ''Section1.value1'' has incorrect type',
     Option.GetType.Ok and (Option.GetType.Value = TYPE_INTEGER));
   AssertTrue('Config element ''Section1.value1'' is incorrect value',
     IntValue = 1);
 
   Option := FConfig.Value['Section1.value2'];
-  IntValue := Option.AsInteger;
+  AssertTrue('Config element ''Section1.value2'' error', Option.AsInteger.Ok);
+  IntValue := Option.AsInteger.Value;
   AssertTrue('Config element ''Section1.value2'' has incorrect type',
     Option.GetType.Ok and (Option.GetType.Value = TYPE_INTEGER));
   AssertTrue('Config element ''Section1.value2'' is incorrect value',
     IntValue = 2);
 
   Option := FConfig.Value['Section1.value3'];
-  IntValue := Option.AsInteger;
+  AssertTrue('Config element ''Section1.value3'' error', Option.AsInteger.Ok);
+  IntValue := Option.AsInteger.Value;
   AssertTrue('Config element ''Section1.value3'' has incorrect type',
     Option.GetType.Ok and (Option.GetType.Value = TYPE_INTEGER));
   AssertTrue('Config element ''Section1.value3'' is incorrect value',
@@ -371,25 +398,24 @@ begin
   FConfig.Value['Section1.value3'].Delete;
 
   Option := FConfig.Value['Section1.value1'];
-  IntValue := Option.AsInteger;
+  AssertTrue('Config element ''Section1.value1'' error', Option.AsInteger.Ok);
+  IntValue := Option.AsInteger.Value;
   AssertTrue('Config element ''Section1.value1'' has incorrect type',
     Option.GetType.Ok and (Option.GetType.Value = TYPE_INTEGER));
   AssertTrue('Config element ''Section1.value1'' is incorrect value',
     IntValue = 1);
 
   Option := FConfig.Value['Section1.value2'];
-  IntValue := Option.AsInteger;
+  AssertTrue('Config element ''Section1.value2'' error', Option.AsInteger.Ok);
+  IntValue := Option.AsInteger.Value;
   AssertTrue('Config element ''Section1.value2'' has incorrect type',
     Option.GetType.Ok and (Option.GetType.Value = TYPE_INTEGER));
   AssertTrue('Config element ''Section1.value2'' is incorrect value',
     IntValue = 2);
 
-  try
-    Option := FConfig.Value['Section1.value3'];
-  except
-    Exit;
-  end;
-  //Fail('Config element ''Section1.value3'' is not deleted');
+  Option := FConfig.Value['Section1.value3'];
+  AssertTrue('Config element ''Section1.value3'' error',
+    not Option.AsInteger.Ok);
 
   FreeAndNil(FConfig);
 end;
