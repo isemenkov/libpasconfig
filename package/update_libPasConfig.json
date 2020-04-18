@@ -9,7 +9,7 @@
   ],
   "UpdatePackageData" : {
     "DisableInOPM" : false,
-    "DownloadZipURL" : "",
+    "DownloadZipURL" : "https://github.com/isemenkov/libpasconfig/blob/master/package/libPasConfig.zip",
     "Name" : "package"
   }
 }
