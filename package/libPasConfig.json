@@ -1,0 +1,31 @@
+{
+  "PackageData0" : {
+    "Name" : "package",
+    "DisplayName" : "libPasConfig",
+    "Category" : "Files and Drives",
+    "CommunityDescription" : "libPasConfig is object pascal wrapper around libconfig library. Library for processing configuration files. ",
+    "RepositoryFileName" : "libPasConfig.zip",
+    "RepositoryFileSize" : 1450,
+    "RepositoryFileHash" : "3f5153fcc165851e3a8ca3a08d903293",
+    "RepositoryDate" : 4.3939459368888885E+004,
+    "PackageBaseDir" : "package\\/",
+    "HomePageURL" : "https://github.com/isemenkov/libpasconfig",
+    "DownloadURL" : "",
+    "SVNURL" : ""
+  },
+  "PackageFiles0" : [
+    {
+      "Name" : "libpasconfigpackage.lpk",
+      "Description" : "libPasConfig is object pascal wrapper around libconfig library. Library for processing configuration files. ",
+      "Author" : "Ivan Semenkov <ivan@semenkov.pro>",
+      "License" : "This source  is free software;  you can redistribute  it and/or modify  it  under the terms of the GNU General Public License as published by the Free Software Foundation; either version 3 of the License.                  \n\nThis code is distributed in the  hope that it will  be useful, but WITHOUT ANY  WARRANTY;  without even  the implied  warranty of MERCHANTABILITY  or FITNESS FOR A PARTICULAR PURPOSE.  See the  GNU General Public License for more details.                                                              \n\nA copy  of the  GNU General Public License is available  on the World Wide Web at <http://www.gnu.org/copyleft/gpl.html>. You  can also obtain  it by writing to the Free Software Foundation, Inc., 51  Franklin Street - Fifth Floor, Boston, MA 02110-1335, USA.",
+      "RelativeFilePath" : "",
+      "VersionAsString" : "1.0.0.0",
+      "LazCompatibility" : "1.6, 1.8, Trunk",
+      "FPCCompatibility" : "2.6.4, 3.0.0, 3.0.2, 3.0.4",
+      "SupportedWidgetSet" : "win32/64, gtk2, carbon",
+      "PackageType" : 0,
+      "DependenciesAsString" : "FCL"
+    }
+  ]
+}
