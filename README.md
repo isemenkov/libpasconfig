@@ -1,6 +1,51 @@
 # libpasconfig
 libPasConfig is object pascal wrapper around [libconfig library](https://github.com/hyperrealm/libconfig). libconfig is library for processing structured configuration files.
 
+
+### Table of contents
+
+  * [Requirements](#requirements)
+  * [Installation](#installation)
+  * [Usage](#usage)
+  * [Testing](#testing)
+  * [Bindings](#bindings)
+    * [Usage example](#usage-example)
+  * [Object wrapper](#object-wrapper)
+    * [Usage example](#usage-example-1)
+
+
+
+### Requirements
+
+* [Free Pascal Compiler](http://freepascal.org)
+* [Lazarus IDE](http://www.lazarus.freepascal.org/) (optional)
+
+Library is tested with latest stable FreePascal Compiler (currently 3.2.0) and Lazarus IDE (currently 2.0.10).
+
+
+
+### Installation
+
+Get the sources and add the *source* directory to the *fpc.cfg* file.
+
+
+
+### Usage
+
+Clone the repository `git clone https://github.com/isemenkov/libpasconfig`.
+
+Add the unit you want to use to the `uses` clause.
+
+
+
+### Testing
+
+A testing framework consists of the following ingredients:
+1. Test runner project located in `unit-tests` directory.
+2. Test cases (FPCUnit based) for config class.
+
+
+
 ### Bindings
 
 [libpasconfig.pas](https://github.com/isemenkov/libpasconfig/blob/master/source/libpasconfig.pas) file contains the libconfig translated headers to use this library in pascal programs.
@@ -70,5 +115,5 @@ libPasConfig is object pascal wrapper around [libconfig library](https://github.
 
     FreeAndNil(config);
   end;
-``` 
+```
 
