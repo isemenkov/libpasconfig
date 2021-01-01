@@ -1,11 +1,14 @@
 unit pasconfigtestcase;
 
-{$mode objfpc}{$H+}
+{$IFDEF FPC}
+  {$mode objfpc}{$H+}
+{$ENDIF}
 
 interface
 
 uses
-  Classes, SysUtils, fpcunit, testregistry, libpasconfig, pasconfig;
+  Classes, SysUtils, libpasconfig, pasconfig
+  {$IFDEF FPC}, fpcunit, testregistry{$ELSE}, TestFramework{$ENDIF};
 
 type
 
@@ -14,6 +17,11 @@ type
   TLibConfigTest = class(TTestCase)
   private
     FConfig : config_t;
+  public
+    {$IFNDEF FPC}
+    procedure AssertTrue (AMessage : String; ACondition : Boolean);
+    {$ENDIF}
+    function StringConvert (AString : String) : PAnsiChar;
   published
     procedure TestCreateConfig;
     procedure TestCreateConfigArray;
@@ -26,6 +34,10 @@ type
   TConfigTest = class(TTestCase)
   private
     FConfig : TConfig;
+  public
+    {$IFNDEF FPC}
+    procedure AssertTrue (AMessage : String; ACondition : Boolean);
+    {$ENDIF}
   published
     procedure TestCreateConfig;
     procedure TestCreateConfigArray;
@@ -39,6 +51,14 @@ implementation
 
 { TConfigTest }
 { Create config file, write and read parameters }
+
+{$IFNDEF FPC}
+procedure TConfigTest.AssertTrue(AMessage: string; ACondition: Boolean);
+begin
+  CheckTrue(ACondition, AMessage);
+end;
+{$ENDIF}
+
 procedure TConfigTest.TestCreateConfig;
 var
   Option : TConfig.TOptionReader;
@@ -59,42 +79,42 @@ begin
   end;
 
   Option := FConfig.Value['test.option1'];
-  AssertTrue('Config element ''test.option1'' error', Option.AsInteger.Ok);
+  AssertTrue('Config element ''test.option1'' error', Option.AsInteger.IsOk);
   IntValue := Option.AsInteger.Value;
   AssertTrue('Config element ''test.option1'' has incorrect type',
-    Option.GetType.Ok and (Option.GetType.Value = TYPE_INTEGER));
+    Option.GetType.IsOk and (Option.GetType.Value = TYPE_INTEGER));
   AssertTrue('Config element ''test.option1'' has incorrect name',
-    Option.GetName.Ok and (Option.GetName.Value = 'option1'));
+    Option.GetName.IsOk and (Option.GetName.Value = 'option1'));
   AssertTrue('Config element ''test.option1'' is incorrect value',
     IntValue = 456);
 
   Option := FConfig.Value['test.option2'];
-  AssertTrue('Config element ''test.option2'' error', Option.AsInt64.Ok);
+  AssertTrue('Config element ''test.option2'' error', Option.AsInt64.IsOk);
   Int64Value := Option.AsInt64.Value;
   AssertTrue('Config element ''test.option2'' has incorrect type',
-    Option.GetType.Ok and (Option.GetType.Value = TYPE_INT64));
+    Option.GetType.IsOk and (Option.GetType.Value = TYPE_INT64));
   AssertTrue('Config element ''test.option2'' has incorrect name',
-    Option.GetName.Ok and (Option.GetName.Value = 'option2'));
+    Option.GetName.IsOk and (Option.GetName.Value = 'option2'));
   AssertTrue('Config element ''test.option2'' is incorrect value',
     Int64Value = 123456);
 
   Option := FConfig.Value['test.option4'];
-  AssertTrue('Config element ''test.option4'' error', Option.AsString.Ok);
+  AssertTrue('Config element ''test.option4'' error', Option.AsString.IsOk);
   StringValue := Option.AsString.Value;
   AssertTrue('Config element ''test.option4'' has incorrect type',
-    Option.GetType.Ok and (Option.GetType.Value = TYPE_STRING));
+    Option.GetType.IsOk and (Option.GetType.Value = TYPE_STRING));
   AssertTrue('Config element ''test.option4'' has incorrect name',
-    Option.GetName.Ok and (Option.GetName.Value = 'option4'));
+    Option.GetName.IsOk and (Option.GetName.Value = 'option4'));
   AssertTrue('Config element ''test.option4'' is incorrect value',
     StringValue = 'test value');
 
   Option := FConfig.Value['test.option5'];
-  AssertTrue('Config element ''test.option5'' error', Option.AsBoolean.Ok);
+  AssertTrue('Config element ''test.option5'' error', Option.AsBoolean.IsOk);
   BooleanValue := Option.AsBoolean.Value;
   AssertTrue('Config element ''test.option5'' has incorrect type',
-    Option.GetType.Ok and (Option.GetType.Value = TYPE_BOOLEAN));
+    Option.GetType.IsOk and (Option.GetType.Value = TYPE_BOOLEAN));
   AssertTrue('Config element ''test.option5'' has incorrect name',
-    Option.GetName.Ok and (Option.GetName.Value = 'option5'));
+    Option.GetName.IsOk and (Option.GetName.Value = 'option5'));
   AssertTrue('Config element ''test.option5'' is incorrect value',
     BooleanValue = True);
 
@@ -120,10 +140,10 @@ begin
   for Option in FConfig.Value['test.test_array'].AsArray do
   begin
     AssertTrue('Config ''array.test_array'' array element error',
-      Option.AsInteger.Ok);
+      Option.AsInteger.IsOk);
     IntValue := Option.AsInteger.Value;
     AssertTrue('Config ''array.test_array'' array element has incorrect type',
-      Option.GetType.Ok and (Option.GetType.Value = TYPE_INTEGER));
+      Option.GetType.IsOk and (Option.GetType.Value = TYPE_INTEGER));
     AssertTrue('Config ''array.test_array'' array element is incorrect value',
       IntValue = i);
     Inc(i);
@@ -158,12 +178,12 @@ begin
   for Option in FConfig.Value['test.test_list'].AsList do
   begin
     AssertTrue('Config element ''option' + IntToStr(i) + '.string_value'' '+
-      'error', Option.Value['string_value'].AsString.Ok);
+      'error', Option.Value['string_value'].AsString.IsOk);
     StringValue := Option.Value['string_value'].AsString.Value;
     AssertTrue('Config element ''option' + IntToStr(i) + '.string_value'' ' +
       'is incorrect value', StringValue = 'Value' + IntToStr(i));
     AssertTrue('Config element ''option' + IntToStr(i) + '.integer_value'' ' +
-      'error', Option.Value['integer_value'].AsInteger.Ok);
+      'error', Option.Value['integer_value'].AsInteger.IsOk);
     IntValue := Option.Value['integer_value'].AsInteger.Value;
     AssertTrue('Config element ''option' + IntToStr(i) + '.integer_value'' ' +
       'is incorrect value', IntValue = i + 8);
@@ -207,7 +227,7 @@ begin
   end;
 
   Res := FConfig.SaveToFile('config.cfg');
-  AssertTrue('Config save config file error', Res.Ok);
+  AssertTrue('Config save config file error', Res.IsOk);
   FreeAndNil(FConfig);
 
   AssertTrue('Config file not exists', FileExists('config.cfg'));
@@ -219,21 +239,21 @@ begin
   begin
     Option := Value['integer_value'];
     AssertTrue('Config element ''section1.integer_value'' error',
-      Option.AsInteger.Ok);
+      Option.AsInteger.IsOk);
     IntValue := Option.AsInteger.Value;
 
     AssertTrue('Config element ''section1.integer_value'' has incorrect type',
-      Option.GetType.Ok and (Option.GetType.Value = TYPE_INTEGER));
+      Option.GetType.IsOk and (Option.GetType.Value = TYPE_INTEGER));
     AssertTrue('Config element ''section1.integer_value'' is incorrect value',
       IntValue = 94032);
 
     Option := Value['boolean_value'];
     AssertTrue('Config element ''section1.boolean_value'' error',
-      Option.AsBoolean.Ok);
+      Option.AsBoolean.IsOk);
     BoolValue := Option.AsBoolean.Value;
 
     AssertTrue('Config element ''section1.boolean_value'' has incorrect type',
-      Option.GetType.Ok and (Option.GetType.Value = TYPE_BOOLEAN));
+      Option.GetType.IsOk and (Option.GetType.Value = TYPE_BOOLEAN));
     AssertTrue('Config element ''section1.boolean_value'' is incorrect value',
       BoolValue = True);
   end;
@@ -244,7 +264,7 @@ begin
     for Option in Value['values'].AsArray do
     begin
       AssertTrue('Config element ''section2.values[' + IntToStr(i) + '] '' ' +
-        'has incorrect type', Option.GetType.Ok and (Option.GetType.Value =
+        'has incorrect type', Option.GetType.IsOk and (Option.GetType.Value =
         TYPE_STRING));
 
       StringValue := Option.AsString.Value;
@@ -273,9 +293,9 @@ begin
       case i of
         1 : begin
           AssertTrue('Config element ''section3.list[1]'' has incorrect type',
-            Option.GetType.Ok and (Option.GetType.Value = TYPE_INT64));
+            Option.GetType.IsOk and (Option.GetType.Value = TYPE_INT64));
           AssertTrue('Config element ''section3.list[1]'' error',
-            Option.AsInt64.Ok);
+            Option.AsInt64.IsOk);
 
           Int64Value := Option.AsInt64.Value;
 
@@ -284,9 +304,9 @@ begin
         end;
         2 : begin
           AssertTrue('Config element ''section3.list[2]'' has incorrect type',
-            Option.GetType.Ok and (Option.GetType.Value = TYPE_INT64));
+            Option.GetType.IsOk and (Option.GetType.Value = TYPE_INT64));
           AssertTrue('Config element ''section3.list[2]'' error',
-            Option.AsInt64.Ok);
+            Option.AsInt64.IsOk);
 
           Int64Value := Option.AsInt64.Value;
 
@@ -295,9 +315,9 @@ begin
         end;
         3 : begin
           AssertTrue('Config element ''section3.list[3]'' has incorrect type',
-            Option.GetType.Ok and (Option.GetType.Value = TYPE_STRING));
+            Option.GetType.IsOk and (Option.GetType.Value = TYPE_STRING));
           AssertTrue('Config element ''section3.list[3]'' error',
-            Option.AsString.Ok);
+            Option.AsString.IsOk);
 
           StringValue := Option.AsString.Value;
 
@@ -325,31 +345,31 @@ begin
   FConfig := TConfig.Create;
   Res := FConfig.Parse('section1 : { integer_value = -12; ' +
                        'boolean_value = false; };');
-  AssertTrue('Config parse error', Res.Ok);
+  AssertTrue('Config parse error', Res.IsOk);
 
   Option := FConfig.Value['section1.integer_value'];
   AssertTrue('Config element ''section1.integer_value'' has incorrect type',
-    Option.GetType.Ok and (Option.GetType.Value = TYPE_INTEGER));
+    Option.GetType.IsOk and (Option.GetType.Value = TYPE_INTEGER));
 
   AssertTrue('Config element ''section1.integer_value'' error',
-    Option.AsInteger.Ok);
+    Option.AsInteger.IsOk);
   IntValue := Option.AsInteger.Value;
   AssertTrue('Config element ''section1.integer_value'' is incorrect value',
     IntValue = -12);
 
   Option := FConfig.Value['section1.boolean_value'];
   AssertTrue('Config element ''section1.boolean_value'' has incorrect type',
-    Option.GetType.Ok and (Option.GetType.Value = TYPE_BOOLEAN));
+    Option.GetType.IsOk and (Option.GetType.Value = TYPE_BOOLEAN));
 
   AssertTrue('Config element ''section1.boolean_value'' error',
-    Option.AsBoolean.Ok);
+    Option.AsBoolean.IsOk);
   BoolValue := Option.AsBoolean.Value;
   AssertTrue('Config element ''section1.boolean_value'' is incorrect value',
     BoolValue = False);
 
   FConfig.CreateSection['section2'].SetString['value'] := 'unknown';
   Res := FConfig.SaveToFile('config.cfg');
-  AssertTrue('Config save config file error', Res.Ok);
+  AssertTrue('Config save config file error', Res.IsOk);
   AssertTrue('Config file not exists', FileExists('config.cfg'));
 
   FreeAndNil(FConfig);
@@ -372,55 +392,67 @@ begin
   end;
 
   Option := FConfig.Value['Section1.value1'];
-  AssertTrue('Config element ''Section1.value1'' error', Option.AsInteger.Ok);
+  AssertTrue('Config element ''Section1.value1'' error', Option.AsInteger.IsOk);
   IntValue := Option.AsInteger.Value;
   AssertTrue('Config element ''Section1.value1'' has incorrect type',
-    Option.GetType.Ok and (Option.GetType.Value = TYPE_INTEGER));
+    Option.GetType.IsOk and (Option.GetType.Value = TYPE_INTEGER));
   AssertTrue('Config element ''Section1.value1'' is incorrect value',
     IntValue = 1);
 
   Option := FConfig.Value['Section1.value2'];
-  AssertTrue('Config element ''Section1.value2'' error', Option.AsInteger.Ok);
+  AssertTrue('Config element ''Section1.value2'' error', Option.AsInteger.IsOk);
   IntValue := Option.AsInteger.Value;
   AssertTrue('Config element ''Section1.value2'' has incorrect type',
-    Option.GetType.Ok and (Option.GetType.Value = TYPE_INTEGER));
+    Option.GetType.IsOk and (Option.GetType.Value = TYPE_INTEGER));
   AssertTrue('Config element ''Section1.value2'' is incorrect value',
     IntValue = 2);
 
   Option := FConfig.Value['Section1.value3'];
-  AssertTrue('Config element ''Section1.value3'' error', Option.AsInteger.Ok);
+  AssertTrue('Config element ''Section1.value3'' error', Option.AsInteger.IsOk);
   IntValue := Option.AsInteger.Value;
   AssertTrue('Config element ''Section1.value3'' has incorrect type',
-    Option.GetType.Ok and (Option.GetType.Value = TYPE_INTEGER));
+    Option.GetType.IsOk and (Option.GetType.Value = TYPE_INTEGER));
   AssertTrue('Config element ''Section1.value3'' is incorrect value',
     IntValue = 3);
 
   FConfig.Value['Section1.value3'].Delete;
 
   Option := FConfig.Value['Section1.value1'];
-  AssertTrue('Config element ''Section1.value1'' error', Option.AsInteger.Ok);
+  AssertTrue('Config element ''Section1.value1'' error', Option.AsInteger.IsOk);
   IntValue := Option.AsInteger.Value;
   AssertTrue('Config element ''Section1.value1'' has incorrect type',
-    Option.GetType.Ok and (Option.GetType.Value = TYPE_INTEGER));
+    Option.GetType.IsOk and (Option.GetType.Value = TYPE_INTEGER));
   AssertTrue('Config element ''Section1.value1'' is incorrect value',
     IntValue = 1);
 
   Option := FConfig.Value['Section1.value2'];
-  AssertTrue('Config element ''Section1.value2'' error', Option.AsInteger.Ok);
+  AssertTrue('Config element ''Section1.value2'' error', Option.AsInteger.IsOk);
   IntValue := Option.AsInteger.Value;
   AssertTrue('Config element ''Section1.value2'' has incorrect type',
-    Option.GetType.Ok and (Option.GetType.Value = TYPE_INTEGER));
+    Option.GetType.IsOk and (Option.GetType.Value = TYPE_INTEGER));
   AssertTrue('Config element ''Section1.value2'' is incorrect value',
     IntValue = 2);
 
   Option := FConfig.Value['Section1.value3'];
   AssertTrue('Config element ''Section1.value3'' error',
-    not Option.AsInteger.Ok);
+    not Option.AsInteger.IsOk);
 
   FreeAndNil(FConfig);
 end;
 
 { TLibConfigTest }
+
+{$IFNDEF FPC}
+procedure TLibConfigTest.AssertTrue(AMessage: string; ACondition: Boolean);
+begin
+  CheckTrue(ACondition, AMessage);
+end;
+{$ENDIF}
+
+function TLibConfigTest.StringConvert (AString : String) : PAnsiChar;
+begin
+  Result := PAnsiChar({$IFNDEF FPC}Utf8Encode{$ENDIF}(AString));
+end;
 
 { Create new config and setup test options values }
 procedure TLibConfigTest.TestCreateConfig;
@@ -431,26 +463,31 @@ begin
   root := config_root_setting(@FConfig);
   AssertTrue('Root config element is nil', root <> nil);
 
-  group := config_setting_add(root, 'test', CONFIG_TYPE_GROUP);
+  group := config_setting_add(root, StringConvert('test'), CONFIG_TYPE_GROUP);
   AssertTrue('Group config element is nil', group <> nil);
 
-  setting := config_setting_add(group, 'option1', CONFIG_TYPE_INT);
+  setting := config_setting_add(group, StringConvert('option1'),
+    CONFIG_TYPE_INT);
   AssertTrue('Added ''option1'' option type ''INT'' is nil', setting <> nil);
   config_setting_set_int(setting, 456);
 
-  setting := config_setting_add(group, 'option2', CONFIG_TYPE_INT64);
+  setting := config_setting_add(group, StringConvert('option2'),
+    CONFIG_TYPE_INT64);
   AssertTrue('Added ''option2'' option type ''INT64'' is nil', setting <> nil);
   config_setting_set_int(setting, 123456);
 
-  setting := config_setting_add(group, 'option3', CONFIG_TYPE_FLOAT);
+  setting := config_setting_add(group, StringConvert('option3'),
+    CONFIG_TYPE_FLOAT);
   AssertTrue('Added ''option3'' option type ''FLOAT'' is nil', setting <> nil);
   config_setting_set_float(setting, 0.001);
 
-  setting := config_setting_add(group, 'option4', CONFIG_TYPE_STRING);
+  setting := config_setting_add(group, StringConvert('option4'),
+    CONFIG_TYPE_STRING);
   AssertTrue('Added ''option4'' option type ''STRING'' is nil', setting <> nil);
-  config_setting_set_string(setting, PChar('test value'));
+  config_setting_set_string(setting, StringConvert('test value'));
 
-  setting := config_setting_add(group, 'option5', CONFIG_TYPE_BOOL);
+  setting := config_setting_add(group, StringConvert('option5'),
+    CONFIG_TYPE_BOOL);
   AssertTrue('Added ''option5'' option type ''BOOL'' is nil', setting <> nil);
   config_setting_set_bool(setting, 1);
 
@@ -467,10 +504,11 @@ begin
   root := config_root_setting(@FConfig);
   AssertTrue('Root config element is nil', root <> nil);
 
-  group := config_setting_add(root, 'test', CONFIG_TYPE_GROUP);
+  group := config_setting_add(root, StringConvert('test'), CONFIG_TYPE_GROUP);
   AssertTrue('Group config element is nil', group <> nil);
 
-  arr := config_setting_add(group, 'array_options', CONFIG_TYPE_ARRAY);
+  arr := config_setting_add(group, StringConvert('array_options'),
+    CONFIG_TYPE_ARRAY);
   AssertTrue('Added ''array_options'' option type ''ARRAY'' is nil', arr <>
     nil);
 
@@ -494,22 +532,24 @@ begin
   root := config_root_setting(@FConfig);
   AssertTrue('Root config element is nil', root <> nil);
 
-  group := config_setting_add(root, 'test', CONFIG_TYPE_GROUP);
+  group := config_setting_add(root, StringConvert('test'), CONFIG_TYPE_GROUP);
   AssertTrue('Group config element is nil', group <> nil);
 
-  setting := config_setting_add(group, 'option1', CONFIG_TYPE_STRING);
+  setting := config_setting_add(group, StringConvert('option1'),
+    CONFIG_TYPE_STRING);
   AssertTrue('Added ''option1'' option type ''STRING'' is nil', setting <> nil);
-  config_setting_set_string(setting, PChar('option value'));
+  config_setting_set_string(setting, StringConvert('option value'));
 
-  setting := config_setting_add(group, 'option2', CONFIG_TYPE_INT);
+  setting := config_setting_add(group, StringConvert('option2'),
+    CONFIG_TYPE_INT);
   AssertTrue('Added ''option2'' option type ''INT'' is nil', setting <> nil);
   config_setting_set_int(setting, -5);
 
-  write_result := config_write_file(@FConfig, 'test.cfg');
+  write_result := config_write_file(@FConfig, StringConvert('test.cfg'));
   AssertTrue('Write config file is error', write_result <> 0);
   AssertTrue('Config file is not exists', FileExists('test.cfg'));
 
-  DeleteFile('test.cfg');
+  DeleteFile(StringConvert('test.cfg'));
   config_destroy(@FConfig);
 end;
 
@@ -519,34 +559,35 @@ procedure TLibConfigTest.TestCreateConfigReadWriteFile;
 var
   root, setting, group : pconfig_setting_t;
   write_result, read_result : Integer;
-  Value : PChar;
+  Value : PAnsiChar;
 begin
   config_init(@FConfig);
   root := config_root_setting(@FConfig);
   AssertTrue('Root config element is nil', root <> nil);
 
-  group := config_setting_add(root, 'Group', CONFIG_TYPE_GROUP);
+  group := config_setting_add(root, StringConvert('Group'), CONFIG_TYPE_GROUP);
   AssertTrue('Config group element is nil', group <> nil);
 
-  setting := config_setting_add(group, 'option1', CONFIG_TYPE_STRING);
+  setting := config_setting_add(group, StringConvert('option1'),
+    CONFIG_TYPE_STRING);
   AssertTrue('Added ''option1'' option type ''STRING'' is nil', setting <> nil);
-  config_setting_set_string(setting, PChar('test value'));
+  config_setting_set_string(setting, StringConvert('test value'));
 
-  setting := config_setting_add(group, 'option2', CONFIG_TYPE_INT);
+  setting := config_setting_add(group, StringConvert('option2'), CONFIG_TYPE_INT);
   AssertTrue('Added ''option2'' option type ''INT'' is nil', setting <> nil);
   config_setting_set_int(setting, 1001);
 
-  write_result := config_write_file(@FConfig, 'test.cfg');
+  write_result := config_write_file(@FConfig, StringConvert('test.cfg'));
   AssertTrue('Write config file is error', write_result <> 0);
   AssertTrue('Config file is not exists', FileExists('test.cfg'));
 
   config_destroy(@FConfig);
   config_init(@FConfig);
 
-  read_result := config_read_file(@FConfig, 'test.cfg');
+  read_result := config_read_file(@FConfig, StringConvert('test.cfg'));
   AssertTrue('Read config file is error', read_result <> 0);
 
-  config_lookup_string(@FConfig, 'Group.option1', @Value);
+  config_lookup_string(@FConfig, StringConvert('Group.option1'), @Value);
   AssertTrue(' ''Group.option1'' config option is not find', Value <> nil);
   AssertTrue('Option value is not corect', Value = 'test value');
 
@@ -555,7 +596,7 @@ begin
 end;
 
 initialization
-  RegisterTest(TLibConfigTest);
-  RegisterTest(TConfigTest);
+  RegisterTest(TLibConfigTest{$IFNDEF FPC}.Suite{$ENDIF});
+  RegisterTest(TConfigTest{$IFNDEF FPC}.Suite{$ENDIF});
 end.
 

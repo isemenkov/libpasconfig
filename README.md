@@ -1,5 +1,5 @@
 # libpasconfig
-libPasConfig is object pascal wrapper around [libconfig library](https://github.com/hyperrealm/libconfig). libconfig is library for processing structured configuration files.
+libPasConfig is delphi and object pascal wrapper around [libconfig library](https://github.com/hyperrealm/libconfig). libconfig is library for processing structured configuration files.
 
 
 ### Table of contents
@@ -17,16 +17,22 @@ libPasConfig is object pascal wrapper around [libconfig library](https://github.
 
 ### Requirements
 
+* [Embarcadero (R) Rad Studio](https://www.embarcadero.com)
 * [Free Pascal Compiler](http://freepascal.org)
 * [Lazarus IDE](http://www.lazarus.freepascal.org/) (optional)
 
-Library is tested with latest stable FreePascal Compiler (currently 3.2.0) and Lazarus IDE (currently 2.0.10).
+
+
+Library is tested for 
+
+- Embarcadero (R) Delphi 10.3 on Windows 7 Service Pack 1 (Version 6.1, Build 7601, 64-bit Edition)
+- FreePascal Compiler (3.2.0) and Lazarus IDE (2.0.10) on Ubuntu Linux 5.8.0-33-generic x86_64
 
 
 
 ### Installation
 
-Get the sources and add the *source* directory to the *fpc.cfg* file.
+Get the sources and add the *source* directory to the project search path. For FPC add the *source* directory to the *fpc.cfg* file.
 
 
 
@@ -42,7 +48,7 @@ Add the unit you want to use to the `uses` clause.
 
 A testing framework consists of the following ingredients:
 1. Test runner project located in `unit-tests` directory.
-2. Test cases (FPCUnit based) for config class.
+2. Test cases (DUnit for Delphi and FPCUnit for FPC based) for all containers classes. 
 
 
 
@@ -64,15 +70,21 @@ A testing framework consists of the following ingredients:
     config_init(@config);
     root := config_root_setting(@config);
 
-    group := config_setting_add(root, 'config_group', CONFIG_TYPE_GROUP);
-    setting := config_setting_add(group, 'option1', CONFIG_TYPE_INT);
+    group := config_setting_add(root, PAnsiChar({$IFNDEF FPC}Utf8Encode{$ENDIF}
+      ('config_group')), CONFIG_TYPE_GROUP);
+    setting := config_setting_add(group, PAnsiChar({$IFNDEF FPC}Utf8Encode
+      {$ENDIF}('option1')), CONFIG_TYPE_INT);
     config_setting_set_int(setting, 123);
 
-    setting := config_setting_add(group, 'option2', CONFIG_TYPE_STRING);
-    config_setting_set_string(setting, PChar('string value'));
+    setting := config_setting_add(group, PAnsiChar({$IFNDEF FPC}Utf8Encode
+      {$ENDIF}('option2')), CONFIG_TYPE_STRING);
+    config_setting_set_string(setting, PAnsiChar({$IFNDEF FPC}Utf8Encode{$ENDIF}
+      ('string value')));
 
-    group := config_setting_add(root, 'config_array', CONFIG_TYPE_GROUP);
-    arr := config_setting_add(group, 'array', CONFIG_TYPE_ARRAY);
+    group := config_setting_add(root, PAnsiChar({$IFNDEF FPC}Utf8Encode{$ENDIF}
+      ('config_array')), CONFIG_TYPE_GROUP);
+    arr := config_setting_add(group, PAnsiChar({$IFNDEF FPC}Utf8Encode{$ENDIF}
+      ('array')), CONFIG_TYPE_ARRAY);
     
     setting := config_setting_add(arr, nil, CONFIG_TYPE_INT64);
     config_setting_set_int64(setting, 1000000000);

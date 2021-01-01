@@ -1,9 +1,9 @@
-(******************************************************************************)
+﻿(******************************************************************************)
 (*                                libPasConfig                                *)
-(*              object pascal wrapper around libconfig library                *)
+(*         delphi and object pascal  wrapper around libconfig library         *)
 (*                  https://github.com/hyperrealm/libconfig                   *)
 (*                                                                            *)
-(* Copyright (c) 2019 - 2020                                Ivan Semenkov     *)
+(* Copyright (c) 2019 - 2021                                Ivan Semenkov     *)
 (* https://github.com/isemenkov/libpasconfig                ivan@semenkov.pro *)
 (*                                                          Ukraine           *)
 (******************************************************************************)
@@ -26,7 +26,9 @@
 
 unit libpasconfig;
 
-{$mode objfpc}{$H+}
+{$IFDEF FPC}
+  {$mode objfpc}{$H+}
+{$ENDIF}
 
 interface
 
@@ -37,21 +39,22 @@ uses
   {$PACKRECORDS C}
 {$ENDIF}
 
-{$IFNDEF libConfig}
-  {$IFDEF WIN32}
-    const libConfig = 'libconfig.dll';
+const
+  {$IFDEF FPC}
+    {$IFDEF WINDOWS}
+      libConfig = 'libconfig.dll';
+    {$ENDIF}
+    {$IFDEF LINUX}
+      libConfig = 'libconfig.so';
+    {$ENDIF}
+  {$ELSE}
+    {$IFDEF MSWINDOWS OR definded(MSWINDOWS)}
+      libConfig = 'libconfig.dll';
+    {$ENDIF}
+    {$IFDEF LINUX}
+      libConfig = 'libconfig.so';
+    {$ENDIF}
   {$ENDIF}
-  {$IFDEF WIN64}
-    const libConfig = 'libconfig-x64.dll';
-  {$ENDIF}
-  {$IFDEF LINUX}
-    const libConfig = 'libconfig.so';
-  {$ENDIF}
-{$ENDIF}
-
-{$IFNDEF LIBCONFIG_VER_1_5_0 AND LIBCONFIG_VER_1_7_0}
-  {$DEFINE LIBCONFIG_VER_1_5_0}
-{$ENDIF}
 
 const
   CONFIG_TYPE_NONE                                                      = 0;
@@ -72,10 +75,8 @@ const
   CONFIG_OPTION_COLON_ASSIGNMENT_FOR_GROUPS                             = $0004;
   CONFIG_OPTION_COLON_ASSIGNMENT_FOR_NON_GROUPS                         = $0008;
   CONFIG_OPTION_OPEN_BRACE_ON_SEPARATE_LINE                             = $0010;
-  {$IFDEF LIBCONFIG_VER_1_7_0}
   CONFIG_OPTION_ALLOW_SCIENTIFIC_NOTATION                               = $0020;
   CONFIG_OPTION_FSYNC                                                   = $0040;
-  {$ENDIF}
 
   CONFIG_TRUE                                                           = 1;
   CONFIG_FALSE                                                          = 0;
@@ -96,7 +97,7 @@ type
     1 : (ival : Integer);
     2 : (llval : Int64);
     3 : (fval : Double);
-    4 : (sval : PChar);
+    4 : (sval : PAnsiChar);
     5 : (list : pconfig_list_t);
   end;
 
@@ -105,7 +106,7 @@ type
   ppconfig_setting_t = ^pconfig_setting_t;
   pconfig_setting_t = ^config_setting_t;
   config_setting_t = record
-    name : PChar;
+    name : PAnsiChar;
     settings_type : Smallint;
     format : Smallint;
     value : config_value_t;
@@ -113,7 +114,7 @@ type
     config : pconfig_t;
     hook : Pointer;
     line : Cardinal;
-    file_name : PChar;
+    file_name : PAnsiChar;
   end;
 
   config_list_t = record
@@ -121,39 +122,28 @@ type
     elements : ppconfig_setting_t;
   end;
 
-  PPChar = ^PChar;
+  PPAnsiChar = ^PAnsiChar;
 
   destructor_fn_t = procedure (obj : Pointer) of object;
-  {$IFDEF LIBCONFIG_VER_1_7_0}
-  config_include_fn_t = function (config : pconfig_t; const include_dir : PChar;
-    const path : PChar; const error : PPChar) : PPChar of object;
-  {$ENDIF}
+  config_include_fn_t = function (config : pconfig_t; const include_dir : PAnsiChar;
+    const path : PAnsiChar; const error : PPAnsiChar) : PPAnsiChar of object;
 
   config_t = record
     root : pconfig_setting_t;
     destructor_callback : destructor_fn_t;
     options : Integer;
     tab_width : Word;
-    {$IFDEF LIBCONFIG_VER_1_5_0}
-    default_format : Smallint;
-    {$ENDIF}
-    {$IFDEF LIBCONFIG_VER_1_7_0}
     float_precision : Word;
     default_format : Word;
-    {$ENDIF}
-    include_dir : PChar;
-    {$IFDEF LIBCONFIG_VER_1_7_0}
+    include_dir : PAnsiChar;
     include_fn : config_include_fn_t;
-    {$ENDIF}
-    error_text : PChar;
-    error_file : PChar;
+    error_text : PAnsiChar;
+    error_file : PAnsiChar;
     error_line : Integer;
     error_type : config_error_t;
-    filenames : PPChar;
+    filenames : PPAnsiChar;
     num_filenames : Cardinal;
-    {$IFDEF LIBCONFIG_VER_1_7_0}
     hook : Pointer;
-    {$ENDIF}
   end;
 
 { Initializes the config_t structure pointed to by config as a new, empty
@@ -165,12 +155,10 @@ procedure config_init (config : pconfig_t); cdecl; external libConfig;
   itself. }
 procedure config_destroy (config : pconfig_t); cdecl; external libConfig;
 
-{$IFDEF LIBCONFIG_VER_1_7_0}
 { This function clears the configuration config. All child settings of the root
   setting are recursively destroyed. All other attributes of the configuration
   are left unchanged. }
 procedure config_clear (config : pconfig_t); cdecl; external libConfig;
-{$ENDIF}
 
 { This function reads and parses a configuration from the given stream into the
   configuration object config. It returns CONFIG_TRUE on success, or
@@ -185,7 +173,7 @@ function config_read (config : pconfig_t; stream : Pointer) : Integer; cdecl;
   CONFIG_FALSE on failure; the config_error_text() and config_error_line()
   functions, described below, can be used to obtain information about the
   error. }
-function config_read_file (config : pconfig_t; const filename : PChar) :
+function config_read_file (config : pconfig_t; const filename : PAnsiChar) :
   Integer; cdecl; external libConfig;
 
 { This function reads and parses a configuration from the string str into the
@@ -193,7 +181,7 @@ function config_read_file (config : pconfig_t; const filename : PChar) :
   CONFIG_FALSE on failure; the config_error_text() and config_error_line()
   functions, described below, can be used to obtain information about the
   error. }
-function config_read_string (config : pconfig_t; const str : PChar) : Integer;
+function config_read_string (config : pconfig_t; const str : PAnsiChar) : Integer;
   cdecl; external libConfig;
 
 { This function writes the configuration config to the given stream. }
@@ -202,7 +190,7 @@ procedure config_write (const config : pconfig_t; stream : Pointer); cdecl;
 
 { This function writes the configuration config to the file named filename. It
   returns CONFIG_TRUE on success, or CONFIG_FALSE on failure. }
-function config_write_file (config : pconfig_t; const filename : PChar) :
+function config_write_file (config : pconfig_t; const filename : PAnsiChar) :
   Integer; cdecl; external libConfig;
 
 { These functions, which are implemented as macros, return the text, filename,
@@ -212,8 +200,8 @@ function config_write_file (config : pconfig_t; const filename : PChar) :
   the library and released automatically when the configuration is destroyed;
   these strings must not be freed by the caller. If the error occurred in text
   that was read from a string or stream, config_error_file() will return NULL. }
-function config_error_text (const config : pconfig_t) : PChar; inline;
-function config_error_file (const config : pconfig_t) : PChar; inline;
+function config_error_text (const config : pconfig_t) : PAnsiChar; inline;
+function config_error_file (const config : pconfig_t) : PAnsiChar; inline;
 function config_error_line (const config : pconfig_t) : Integer; inline;
 
 { This function, which is implemented as a macro, returns the type of error that
@@ -236,10 +224,9 @@ function config_error_type (const config : pconfig_t) : config_error_t; inline;
   config_get_include_dir() returns the current include directory for the
   configuration config, or NULL if none is set. }
 procedure config_set_include_dir (config : pconfig_t; const include_dir :
-  PChar); cdecl; external libConfig;
-function config_get_include_dir (const config : pconfig_t) : PChar; inline;
+  PAnsiChar); cdecl; external libConfig;
+function config_get_include_dir (const config : pconfig_t) : PAnsiChar; inline;
 
-{$IFDEF LIBCONFIG_VER_1_7_0}
 { Specifies the include function func to use when processing include directives.
   If func is NULL, the default include function, config_default_include_func(),
   will be reinstated.
@@ -289,9 +276,7 @@ function config_get_include_dir (const config : pconfig_t) : PChar; inline;
   implementations of such include functions are not included. }
 procedure config_set_include_func (config : pconfig_t; func :
   config_include_fn_t); cdecl; external libConfig;
-{$ENDIF}
 
-{$IFDEF LIBCONFIG_VER_1_7_0}
 { These functions get and set the number of decimal digits to output after the
   radix character when writing the configuration to a file or stream.
 
@@ -303,7 +288,6 @@ function config_get_float_precision (const config : pconfig_t) : Word; cdecl;
   external libConfig;
 procedure config_set_float_precision (config : pconfig_t; digits : Word); cdecl;
   external libConfig;
-{$ENDIF}
 
 { These functions get and set the options for the configuration config. The
   options affect how configurations are read and written. The following options
@@ -339,7 +323,7 @@ procedure config_set_float_precision (config : pconfig_t; digits : Word); cdecl;
         configuration syntax.) By default this option is turned off.
 
     CONFIG_OPTION_OPEN_BRACE_ON_SEPARATE_LINE
-        This option controls whether an open brace (‘{’) will be written on its
+        This option controls whether an open brace will be written on its
         own line when the configuration is written to a file or stream. If the
         option is turned off, the brace will be written at the end of the
         previous line. By default this option is turned on.
@@ -353,13 +337,12 @@ procedure config_set_float_precision (config : pconfig_t; digits : Word); cdecl;
     CONFIG_OPTION_FSYNC
         (Since v1.7.1) This option controls whether the config_write_file()
         function performs an fsync operation after writing the configuration and
-        before closing the file. By default this option is turned off. }}
+        before closing the file. By default this option is turned off. }
 function config_get_options (const config : pconfig_t) : Integer; cdecl;
   external libConfig;
 procedure config_set_options (config : pconfig_t; options : Integer); cdecl;
   external libConfig;
 
-{$IFDEF LIBCONFIG_VER_1_7_0}
 { These functions get and set the given option of the configuration config. The
   option is enabled if flag is CONFIG_TRUE and disabled if it is CONFIG_FALSE.
 
@@ -368,9 +351,7 @@ function config_get_option (const config : pconfig_t; option : Integer) :
   Integer; cdecl; external libConfig;
 procedure config_set_option (config : pconfig_t; option : Integer; flag :
   Integer); cdecl; external libConfig;
-{$ENDIF}
 
-{$IFDEF LIBCONFIG_VER_1_5_0}
 { These functions get and set the CONFIG_OPTION_AUTO_CONVERT option. They are
   obsoleted by the config_set_option() and config_get_option() functions
   described above. }
@@ -378,14 +359,6 @@ function config_get_auto_convert (const config : pconfig_t) : Integer; cdecl;
   external libConfig;
 procedure config_set_auto_convert (config : pconfig_t; flag : Integer); cdecl;
   external libConfig;
-{$ENDIF}
-{$IFDEF LIBCONFIG_VER_1_7_0}
-{ These functions get and set the CONFIG_OPTION_AUTO_CONVERT option. They are
-  obsoleted by the config_set_option() and config_get_option() functions
-  described above. }
-function config_get_auto_convert (const config : pconfig_t) : Integer; inline;
-procedure config_set_auto_convert (config : pconfig_t; flag : Integer); inline;
-{$ENDIF}
 
 { These functions, which are implemented as macros, get and set the default
   external format for settings in the configuration config. If a non-default
@@ -414,28 +387,28 @@ procedure config_set_tab_Width (config : pconfig_t; width : Word); inline;
   Storage for the string returned by config_lookup_string() is managed by the
   library and released automatically when the setting is destroyed or when the
   setting’s value is changed; the string must not be freed by the caller. }
-function config_lookup_int (const config : pconfig_t; const path : PChar;
+function config_lookup_int (const config : pconfig_t; const path : PAnsiChar;
   value : PInteger) : Integer; cdecl; external libConfig;
-function config_lookup_int64 (const config : pconfig_t; const path : PChar;
+function config_lookup_int64 (const config : pconfig_t; const path : PAnsiChar;
   value : PInt64) : Integer; cdecl; external libConfig;
-function config_lookup_float (const config : pconfig_t; const path : PChar;
+function config_lookup_float (const config : pconfig_t; const path : PAnsiChar;
   value : PDouble) : Integer; cdecl; external libConfig;
-function config_lookup_bool (const config : pconfig_t; const path : PChar;
+function config_lookup_bool (const config : pconfig_t; const path : PAnsiChar;
   value : PInteger) : Integer; cdecl; external libConfig;
-function config_lookup_string (const config : pconfig_t; const path : PChar;
-  value : PPChar) : Integer; cdecl; external libConfig;
+function config_lookup_string (const config : pconfig_t; const path : PAnsiChar;
+  value : PPAnsiChar) : Integer; cdecl; external libConfig;
 
 { This function locates the setting in the configuration config specified by the
   path path. It returns a pointer to the config_setting_t structure on success,
   or NULL if the setting was not found. }
-function config_lookup (const config : pconfig_t; const path : PChar) :
+function config_lookup (const config : pconfig_t; const path : PAnsiChar) :
   pconfig_setting_t; cdecl; external libConfig;
 
 { This function locates a setting by a path path relative to the setting
   setting. It returns a pointer to the config_setting_t structure on success, or
   NULL if the setting was not found. }
 function config_setting_lookup (setting : pconfig_setting_t; const path :
-  PChar) : pconfig_setting_t; cdecl; external libConfig;
+  PAnsiChar) : pconfig_setting_t; cdecl; external libConfig;
 
 { These functions return the value of the given setting. If the type of the
   setting does not match the type requested, a 0 or NULL value is returned.
@@ -451,7 +424,7 @@ function config_setting_get_float (const setting : pconfig_setting_t) :
 function config_setting_get_bool (const setting : pconfig_setting_t) :
   Integer; cdecl; external libConfig;
 function config_setting_get_string (const setting : pconfig_setting_t) :
-  PChar; cdecl; external libConfig;
+  PAnsiChar; cdecl; external libConfig;
 
 { These functions set the value of the given setting to value. On success, they
   return CONFIG_TRUE. If the setting does not match the type of the value, they
@@ -467,7 +440,7 @@ function config_setting_set_float (setting : pconfig_setting_t; value : Double)
 function config_setting_set_bool (setting : pconfig_setting_t; value : Integer)
   : Integer; cdecl; external libConfig;
 function config_setting_set_string (setting : pconfig_setting_t; const value :
-  PChar) : Integer; cdecl; external libConfig;
+  PAnsiChar) : Integer; cdecl; external libConfig;
 
 { These functions look up the value of the child setting named name of the
   setting setting. They store the value at value and return CONFIG_TRUE on
@@ -480,15 +453,15 @@ function config_setting_set_string (setting : pconfig_setting_t; const value :
   when the setting’s value is changed; the string must not be freed by the
   caller. }
 function config_setting_lookup_int (const setting : pconfig_setting_t; const
-  name : PChar; value : PInteger) : Integer; cdecl; external libConfig;
+  name : PAnsiChar; value : PInteger) : Integer; cdecl; external libConfig;
 function config_setting_lookup_int64 (const setting : pconfig_setting_t; const
-  name : PChar; value : PInt64) : Integer; cdecl; external libConfig;
+  name : PAnsiChar; value : PInt64) : Integer; cdecl; external libConfig;
 function config_setting_lookup_float (const setting : pconfig_setting_t; const
-  name : PChar; value : PDouble) : Integer; cdecl; external libConfig;
+  name : PAnsiChar; value : PDouble) : Integer; cdecl; external libConfig;
 function config_setting_lookup_bool (const setting : pconfig_setting_t; const
-  name : PChar; value : PInteger) : Integer; cdecl; external libConfig;
+  name : PAnsiChar; value : PInteger) : Integer; cdecl; external libConfig;
 function config_setting_lookup_string (const setting : pconfig_setting_t; const
-  name : PChar; value : PPChar) : Integer; cdecl; external libConfig;
+  name : PAnsiChar; value : PPAnsiChar) : Integer; cdecl; external libConfig;
 
 { These functions get and set the external format for the setting setting.
 
@@ -513,7 +486,7 @@ function config_setting_set_format (setting : pconfig_setting_t; format : Word)
   returns the requested setting on success, or NULL if the setting was not found
   or if setting is not a group. }
 function config_setting_get_member (const setting : pconfig_setting_t; const
-  name : PChar) : pconfig_setting_t; cdecl; external libConfig;
+  name : PAnsiChar) : pconfig_setting_t; cdecl; external libConfig;
 
 { This function fetches the element at the given index index in the setting
   setting, which must be an array, list, or group. It returns the requested
@@ -538,7 +511,7 @@ function config_setting_get_float_elem (const setting : pconfig_setting_t; idx :
 function config_setting_get_bool_elem (const setting : pconfig_setting_t; idx :
   Integer) : Integer; cdecl; external libConfig;
 function config_setting_get_string_elem (const setting : pconfig_setting_t;
-  idx : Integer) : PChar; cdecl; external libConfig;
+  idx : Integer) : PAnsiChar; cdecl; external libConfig;
 
 { These functions set the value at the specified index index in the setting
   setting to value. If index is negative, a new element is added to the end of
@@ -558,7 +531,7 @@ function config_setting_set_float_elem (setting : pconfig_setting_t; idx :
 function config_setting_set_bool_elem (setting : pconfig_setting_t; idx :
   Integer; value : Integer) : pconfig_setting_t; cdecl; external libConfig;
 function config_setting_set_string_elem (setting : pconfig_setting_t; idx :
-  Integer; const value : PChar) : pconfig_setting_t; cdecl; external libConfig;
+  Integer; const value : PAnsiChar) : pconfig_setting_t; cdecl; external libConfig;
 
 { This function adds a new child setting or element to the setting parent, which
   must be a group, array, or list. If parent is an array or list, the name
@@ -568,7 +541,7 @@ function config_setting_set_string_elem (setting : pconfig_setting_t; idx :
   group, array, or list; or if there is already a child setting of parent named
   name; or if type is invalid. If type is a scalar type, the new setting will
   have a default value of 0, 0.0, false, or NULL, as appropriate. }
-function config_setting_add (parent : pconfig_setting_t; const name : PChar;
+function config_setting_add (parent : pconfig_setting_t; const name : PAnsiChar;
   elem_type : Integer) : pconfig_setting_t; cdecl; external libConfig;
 
 { This function removes and destroys the setting named name from the parent
@@ -580,7 +553,7 @@ function config_setting_add (parent : pconfig_setting_t; const name : PChar;
 
   The function returns CONFIG_TRUE on success. If parent is not a group, or if
   it has no setting with the given name, it returns CONFIG_FALSE. }
-function config_setting_remove (parent : pconfig_setting_t; const name : PChar)
+function config_setting_remove (parent : pconfig_setting_t; const name : PAnsiChar)
   : Integer; cdecl; external libConfig;
 
 { This function removes the child setting at the given index index from the
@@ -601,7 +574,7 @@ function config_root_setting (const config : pconfig_t) :
   has no name. Storage for the returned string is managed by the library and
   released automatically when the setting is destroyed; the string must not be
   freed by the caller. }
-function config_setting_name (const setting : pconfig_setting_t) : PChar;
+function config_setting_name (const setting : pconfig_setting_t) : PAnsiChar;
   inline;
 
 { This function returns the parent setting of the given setting, or NULL if
@@ -657,7 +630,7 @@ function config_setting_is_scalar (const setting : pconfig_setting_t) : Integer;
   useful for reporting application-level errors. Storage for the returned string
   is managed by the library and released automatically when the configuration is
   destroyed; the string must not be freed by the caller. }
-function config_setting_source_file (const setting : pconfig_setting_t) : PChar;
+function config_setting_source_file (const setting : pconfig_setting_t) : PAnsiChar;
   inline;
 
 { This function returns the line number of the configuration file or stream at
@@ -666,14 +639,12 @@ function config_setting_source_file (const setting : pconfig_setting_t) : PChar;
 function config_setting_source_line (const setting : pconfig_setting_t) :
     Cardinal; inline;
 
-{$IFDEF LIBCONFIG_VER_1_7_0}
 { These functions make it possible to attach arbitrary data to a configuration
   structure, for instance a “wrapper” or “peer” object written in another
   programming language. }
 procedure config_set_hook (config : pconfig_t; hook : Pointer); cdecl;
   external libConfig;
 function config_get_hook (const config : pconfig_t) : Pointer; inline;
-{$ENDIF}
 
 { These functions make it possible to attach arbitrary data to each setting
   structure, for instance a “wrapper” or “peer” object written in another
@@ -694,12 +665,12 @@ procedure config_set_destructor (config : pconfig_t; destructor_fn :
 
 implementation
 
-function config_error_text(const config: pconfig_t): PChar;
+function config_error_text(const config: pconfig_t): PAnsiChar;
 begin
   Result := config^.error_text;
 end;
 
-function config_error_file(const config: pconfig_t): PChar;
+function config_error_file(const config: pconfig_t): PAnsiChar;
 begin
   Result := config^.error_file;
 end;
@@ -714,22 +685,10 @@ begin
   Result := config^.error_type;
 end;
 
-function config_get_include_dir(const config: pconfig_t): PChar;
+function config_get_include_dir(const config: pconfig_t): PAnsiChar;
 begin
   Result := config^.include_dir;
 end;
-
-{$IFDEF LIBCONFIG_VER_1_7_0}
-function config_get_auto_convert(const config: pconfig_t): Integer;
-begin
-  Result := config_get_option(config, CONFIG_OPTION_AUTOCONVERT);
-end;
-
-procedure config_set_auto_convert(config: pconfig_t; flag: Integer);
-begin
-  config_set_option(config, CONFIG_OPTION_AUTOCONVERT, flag);
-end;
-{$ENDIF}
 
 function config_get_default_format(config: pconfig_t): Word;
 begin
@@ -757,7 +716,7 @@ begin
   Result := config^.root;
 end;
 
-function config_setting_name(const setting: pconfig_setting_t): PChar;
+function config_setting_name(const setting: pconfig_setting_t): PAnsiChar;
 begin
   Result := setting^.name;
 end;
@@ -817,7 +776,7 @@ begin
     Boolean(config_setting_is_number(setting)));
 end;
 
-function config_setting_source_file(const setting: pconfig_setting_t): PChar;
+function config_setting_source_file(const setting: pconfig_setting_t): PAnsiChar;
 begin
   Result := setting^.file_name;
 end;
@@ -827,12 +786,10 @@ begin
   Result := setting^.line;
 end;
 
-{$IFDEF LIBCONFIG_VER_1_7_0}
 function config_get_hook(const config: pconfig_t): Pointer;
 begin
   Result := config^.hook;
 end;
-{$ENDIF}
 
 function config_setting_get_hook(const setting: pconfig_setting_t): Pointer;
 begin
